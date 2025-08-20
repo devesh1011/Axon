@@ -54,6 +54,7 @@ export default function CreatePage() {
     error,
   } = useOmniSoulContract();
   const [selectedFiles, setSelectedFiles] = useState<SelectedFile[]>([]);
+  const [nftImage, setNftImage] = useState<SelectedFile | null>(null);
   const [mintedTokenId, setMintedTokenId] = useState<string>("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [createdTokenURI, setCreatedTokenURI] = useState<string>("");
@@ -134,6 +135,21 @@ export default function CreatePage() {
     setSelectedFiles(fileData);
   };
 
+  const handleNftImageSelected = (file: File) => {
+    // Validate that it's an image
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file for the NFT");
+      return;
+    }
+
+    setNftImage({
+      file,
+      name: file.name,
+      type: file.type,
+      size: file.size,
+    });
+  };
+
   const handleCreateOmniSoul = async () => {
     if (!address) {
       toast.error("Please connect your wallet first");
@@ -157,9 +173,39 @@ export default function CreatePage() {
         type: string;
       }> = [];
 
+      // Upload NFT image first
+      let nftImageCID = "";
+      if (nftImage) {
+        console.log("Uploading NFT image to IPFS...");
+        toast.info("Uploading NFT image to IPFS...");
+
+        const imageFormData = new FormData();
+        imageFormData.append("file", nftImage.file);
+        imageFormData.append("pinName", `omni-soul-image-${nftImage.name}`);
+
+        const imageResponse = await fetch("/api/ipfs/upload", {
+          method: "POST",
+          body: imageFormData,
+        });
+
+        const imageResult = await imageResponse.json();
+
+        if (imageResult.success && imageResult.data) {
+          nftImageCID = imageResult.data.cid;
+          console.log("NFT image uploaded successfully:", nftImageCID);
+          toast.success("NFT image uploaded to IPFS successfully!");
+        } else {
+          throw new Error(`Failed to upload NFT image: ${imageResult.error}`);
+        }
+      } else {
+        toast.error("Please select an NFT image");
+        return;
+      }
+
+      // Upload additional files
       if (selectedFiles.length > 0) {
-        console.log("Uploading files to IPFS...");
-        toast.info("Uploading files to IPFS...");
+        console.log("Uploading additional files to IPFS...");
+        toast.info("Uploading additional files to IPFS...");
 
         for (const fileData of selectedFiles) {
           const formData = new FormData();
@@ -189,9 +235,10 @@ export default function CreatePage() {
         toast.success("Files uploaded to IPFS successfully!");
       }
 
-      // Step 2: Create and upload metadata JSON
+      // Step 2: Create metadata and mint NFT on blockchain
       console.log("Creating metadata...");
       toast.info("Creating metadata...");
+
       const metadataResponse = await fetch("/api/nft/metadata", {
         method: "POST",
         headers: {
@@ -201,7 +248,16 @@ export default function CreatePage() {
           metadata: {
             name: personalData.name,
             description: personalData.description,
+            image: `ipfs://${nftImageCID}`,
             attributes: [
+              {
+                trait_type: "Type",
+                value: "Omni-Soul",
+              },
+              {
+                trait_type: "Files Uploaded",
+                value: uploadedFileCIDs.length,
+              },
               ...(personalData.interests.length > 0
                 ? [
                     {
@@ -278,7 +334,7 @@ export default function CreatePage() {
 
   // Effect to handle transaction confirmation and navigation
   useEffect(() => {
-    if (isConfirmed && receipt) {
+    if (isConfirmed && receipt && createdTokenURI) {
       console.log("Transaction confirmed with receipt:", receipt);
 
       // Extract the actual token ID from the transaction receipt
@@ -288,12 +344,15 @@ export default function CreatePage() {
         console.log("Successfully minted with token ID:", extractedTokenId);
         setMintedTokenId(extractedTokenId);
 
+        // Save NFT to database
+        saveNFTToDatabase(extractedTokenId, receipt.transactionHash);
+
         toast.success(
           `OmniSoul minted successfully! Token ID: ${extractedTokenId}`
         );
 
         // Navigate to the minted persona page
-        router.push(`/omnisoul/${extractedTokenId}`);
+        router.push(`/persona/${extractedTokenId}`);
         setIsProcessing(false);
       } else {
         console.error("Failed to extract token ID from transaction receipt");
@@ -301,7 +360,32 @@ export default function CreatePage() {
         setIsProcessing(false);
       }
     }
-  }, [isConfirmed, receipt, router]);
+  }, [isConfirmed, receipt, createdTokenURI, router]);
+
+  // Function to save NFT to database after blockchain confirmation
+  const saveNFTToDatabase = async (tokenId: string, txHash: string) => {
+    try {
+      const response = await fetch("/api/nft/save", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          tokenId,
+          transactionHash: txHash,
+          tokenURI: createdTokenURI,
+          walletAddress: address,
+        }),
+      });
+
+      const result = await response.json();
+      if (!result.success) {
+        console.error("Failed to save NFT to database:", result.error);
+      }
+    } catch (error) {
+      console.error("Error saving NFT to database:", error);
+    }
+  };
 
   // Effect to handle transaction errors
   useEffect(() => {
@@ -458,12 +542,82 @@ export default function CreatePage() {
                   transition={{ duration: 0.5 }}
                   className="space-y-6"
                 >
-                  {/* File Upload Section */}
+                  {/* NFT Image Upload Section */}
                   <Card className="glass p-6">
                     <div className="space-y-4">
                       <div className="text-center">
                         <h3 className="text-2xl font-bold text-neon-cyan mb-2">
-                          Upload Your Persona Files
+                          Upload NFT Image
+                        </h3>
+                        <p className="text-muted-foreground">
+                          Choose an image that will represent your NFT
+                        </p>
+                      </div>
+
+                      <div className="border-2 border-dashed border-border rounded-lg p-8 text-center hover:border-neon-cyan/50 transition-colors">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleNftImageSelected(file);
+                          }}
+                          className="hidden"
+                          id="nft-image-upload"
+                        />
+                        <label
+                          htmlFor="nft-image-upload"
+                          className="cursor-pointer"
+                        >
+                          <div className="space-y-4">
+                            <div className="w-16 h-16 mx-auto bg-gradient-to-br from-neon-cyan to-neon-magenta rounded-full flex items-center justify-center">
+                              <Upload className="h-8 w-8 text-background" />
+                            </div>
+                            <div>
+                              <p className="text-lg font-medium">
+                                Drop image here or click to upload
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                Supports PNG, JPG, GIF, WebP
+                              </p>
+                            </div>
+                          </div>
+                        </label>
+                      </div>
+
+                      {nftImage && (
+                        <div className="mt-4">
+                          <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                            <div className="flex items-center space-x-3">
+                              <div className="w-10 h-10 bg-gradient-to-br from-neon-cyan to-neon-magenta rounded-full flex items-center justify-center">
+                                <FileText className="h-5 w-5 text-background" />
+                              </div>
+                              <div>
+                                <p className="font-medium">{nftImage.name}</p>
+                                <p className="text-sm text-muted-foreground">
+                                  {(nftImage.size / 1024 / 1024).toFixed(2)} MB
+                                </p>
+                              </div>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setNftImage(null)}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </Card>
+
+                  {/* Additional Files Upload Section */}
+                  <Card className="glass p-6">
+                    <div className="space-y-4">
+                      <div className="text-center">
+                        <h3 className="text-2xl font-bold text-neon-cyan mb-2">
+                          Upload Additional Files (Optional)
                         </h3>
                         <p className="text-muted-foreground">
                           Upload documents that represent your persona (PDFs,
