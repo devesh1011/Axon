@@ -7,38 +7,56 @@ import { Plus, ExternalLink, MessageCircle, LinkIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PersonaCardSkeleton } from "@/components/LoadingSkeleton";
 import { NetworkGuard } from "@/components/NetworkGuard";
+import { toast } from "sonner";
 
-interface PersonaToken {
+interface NFTData {
+  id: string;
   tokenId: string;
   name: string;
   description: string;
-  image: string;
+  imageUrl: string;
+  metadataUri: string;
+  pinataCid: string;
+  imageCid: string;
+  walletAddress: string;
+  transactionHash: string;
   createdAt: string;
-  linkedAssets: number;
+  updatedAt: string;
+  metadata: Record<string, unknown> | null;
+  uploadedFiles: string[];
 }
 
 export default function DashboardPage() {
   const { address, isConnected } = useAccount();
   const router = useRouter();
-  const [personas, setPersonas] = useState<PersonaToken[]>([]);
+  const [nfts, setNfts] = useState<NFTData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (isConnected && address) {
-      fetchUserPersonas();
+      fetchUserNFTs();
     }
   }, [isConnected, address]);
 
-  const fetchUserPersonas = async () => {
+  const fetchUserNFTs = async () => {
     try {
       setLoading(true);
-      // In a real implementation, you'd fetch from your API
-      // For now, we'll simulate loading
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      setPersonas([]);
+      setError(null);
+
+      const response = await fetch(`/api/nft/user/${address}`);
+      const result = await response.json();
+
+      if (result.success) {
+        setNfts(result.data || []);
+      } else {
+        setError(result.error || "Failed to load NFTs");
+        toast.error("Failed to load your NFTs");
+      }
     } catch (err) {
-      setError("Failed to load personas");
+      console.error("Error fetching NFTs:", err);
+      setError("Failed to load NFTs");
+      toast.error("Failed to load your NFTs");
     } finally {
       setLoading(false);
     }
@@ -70,6 +88,15 @@ export default function DashboardPage() {
             <p className="text-gray-400">
               Manage your OmniSoul NFTs and linked cross-chain assets
             </p>
+            <div className="mt-4">
+              <Button
+                variant="outline"
+                onClick={() => router.push("/gallery")}
+                className="border-cyan-500/50 text-cyan-400 hover:bg-cyan-500/10"
+              >
+                View All NFTs
+              </Button>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -100,14 +127,14 @@ export default function DashboardPage() {
             {error && (
               <div className="col-span-full text-center py-12">
                 <p className="text-red-400 mb-4">{error}</p>
-                <Button onClick={fetchUserPersonas} variant="outline">
+                <Button onClick={fetchUserNFTs} variant="outline">
                   Try Again
                 </Button>
               </div>
             )}
 
             {/* Empty State */}
-            {!loading && !error && personas.length === 0 && (
+            {!loading && !error && nfts.length === 0 && (
               <div className="col-span-full text-center py-12">
                 <h3 className="text-xl font-semibold text-white mb-2">
                   No Personas Yet
@@ -122,36 +149,46 @@ export default function DashboardPage() {
               </div>
             )}
 
-            {/* Persona Cards */}
-            {personas.map((persona) => (
+            {/* NFT Cards */}
+            {nfts.map((nft) => (
               <div
-                key={persona.tokenId}
+                key={nft.id}
                 className="bg-gray-900/50 backdrop-blur-sm border border-cyan-500/20 rounded-lg overflow-hidden hover:border-cyan-500/40 transition-colors"
               >
                 <div className="aspect-square bg-gradient-to-br from-cyan-500/20 to-purple-500/20 relative">
-                  {persona.image && (
+                  {nft.imageUrl ? (
                     <img
-                      src={persona.image || "/placeholder.svg"}
-                      alt={persona.name}
+                      src={nft.imageUrl}
+                      alt={nft.name}
                       className="w-full h-full object-cover"
+                      onError={(e) => {
+                        // Fallback to gradient background if image fails to load
+                        e.currentTarget.style.display = "none";
+                      }}
                     />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <div className="text-cyan-400 text-4xl font-bold">
+                        {nft.name.charAt(0).toUpperCase()}
+                      </div>
+                    </div>
                   )}
                 </div>
                 <div className="p-6">
                   <h3 className="text-xl font-semibold text-white mb-2">
-                    {persona.name}
+                    {nft.name}
                   </h3>
                   <p className="text-gray-400 text-sm mb-4 line-clamp-2">
-                    {persona.description}
+                    {nft.description}
                   </p>
                   <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
-                    <span>Token #{persona.tokenId}</span>
-                    <span>{persona.linkedAssets} linked assets</span>
+                    <span>Token #{nft.tokenId}</span>
+                    <span>{nft.uploadedFiles.length} linked files</span>
                   </div>
                   <div className="flex space-x-2">
                     <Button
                       size="sm"
-                      onClick={() => router.push(`/persona/${persona.tokenId}`)}
+                      onClick={() => router.push(`/persona/${nft.tokenId}`)}
                       className="flex-1"
                     >
                       <MessageCircle className="w-4 h-4 mr-2" />
@@ -169,7 +206,7 @@ export default function DashboardPage() {
                       variant="outline"
                       onClick={() =>
                         window.open(
-                          `https://athens.explorer.zetachain.com/token/${process.env.NEXT_PUBLIC_OMNISOUL_ADDRESS}/${persona.tokenId}`,
+                          `https://athens.explorer.zetachain.com/tx/${nft.transactionHash}`,
                           "_blank"
                         )
                       }
