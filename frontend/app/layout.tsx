@@ -7,6 +7,7 @@ import { WalletProvider } from "@/components/WalletProvider";
 import { Toaster } from "@/components/ui/sonner";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Navbar } from "@/components/Navbar";
+import { AuthProvider } from "@/contexts/AuthContext";
 
 const orbitron = Orbitron({
   subsets: ["latin"],
@@ -104,13 +105,15 @@ html {
           disableTransitionOnChange
         >
           <WalletProvider>
-            <ErrorBoundary>
-              <div className="relative min-h-screen scanlines">
-                <Navbar />
-                {children}
-              </div>
-              <Toaster />
-            </ErrorBoundary>
+            <AuthProvider>
+              <ErrorBoundary>
+                <div className="relative min-h-screen scanlines">
+                  <Navbar />
+                  {children}
+                </div>
+                <Toaster />
+              </ErrorBoundary>
+            </AuthProvider>
           </WalletProvider>
         </ThemeProvider>
       </body>

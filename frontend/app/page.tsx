@@ -1,11 +1,11 @@
-"use client"
+"use client";
 
-import { motion } from "framer-motion"
-import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import { Brain, Zap, Sparkles, Link } from "lucide-react"
-import NextLink from "next/link"
-import { Navbar } from "@/components/Navbar"
+import { motion } from "framer-motion";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Brain, Zap, Sparkles, Link } from "lucide-react";
+import NextLink from "next/link";
+import { Navbar } from "@/components/Navbar";
 
 export default function HomePage() {
   return (
@@ -33,8 +33,8 @@ export default function HomePage() {
               OMNI-SOUL
             </h1>
             <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-              Mint your digital persona as an NFT on ZetaChain. Upload your data to IPFS and chat with an AI version of
-              yourself.
+              Mint your digital persona as an NFT on ZetaChain. Upload your data
+              to IPFS and chat with an AI version of yourself.
             </p>
           </motion.div>
 
@@ -50,10 +50,15 @@ export default function HomePage() {
                 Create Omni-Soul
               </NextLink>
             </Button>
-            <Button asChild variant="outline" size="lg" className="glass bg-transparent">
-              <NextLink href="/persona/1">
+            <Button
+              asChild
+              variant="outline"
+              size="lg"
+              className="glass bg-transparent"
+            >
+              <NextLink href="/gallery">
                 <Brain className="mr-2 h-5 w-5" />
-                View Persona
+                View Gallery
               </NextLink>
             </Button>
           </motion.div>
@@ -72,10 +77,12 @@ export default function HomePage() {
                 <Brain className="h-8 w-8 text-background" />
               </div>
             </div>
-            <h3 className="text-2xl font-bold mb-4 text-neon-cyan">AI Persona</h3>
+            <h3 className="text-2xl font-bold mb-4 text-neon-cyan">
+              AI Persona
+            </h3>
             <p className="text-muted-foreground leading-relaxed">
-              Upload your personal data and create an AI that speaks in your voice, powered by Google Gemini and
-              LangChain.
+              Upload your personal data and create an AI that speaks in your
+              voice, powered by Google Gemini and LangChain.
             </p>
           </Card>
 
@@ -85,9 +92,12 @@ export default function HomePage() {
                 <Zap className="h-8 w-8 text-background" />
               </div>
             </div>
-            <h3 className="text-2xl font-bold mb-4 text-neon-magenta">ZetaChain NFT</h3>
+            <h3 className="text-2xl font-bold mb-4 text-neon-magenta">
+              ZetaChain NFT
+            </h3>
             <p className="text-muted-foreground leading-relaxed">
-              Mint your persona as an ERC-721 NFT on ZetaChain Athens Testnet with metadata stored on IPFS.
+              Mint your persona as an ERC-721 NFT on ZetaChain Athens Testnet
+              with metadata stored on IPFS.
             </p>
           </Card>
 
@@ -97,9 +107,12 @@ export default function HomePage() {
                 <Link className="h-8 w-8 text-background" />
               </div>
             </div>
-            <h3 className="text-2xl font-bold mb-4 text-neon-purple">Cross-Chain Assets</h3>
+            <h3 className="text-2xl font-bold mb-4 text-neon-purple">
+              Cross-Chain Assets
+            </h3>
             <p className="text-muted-foreground leading-relaxed">
-              Link your existing NFTs from Ethereum, Polygon, and Solana to your Omni-Soul persona.
+              Link your existing NFTs from Ethereum, Polygon, and Solana to your
+              Omni-Soul persona.
             </p>
           </Card>
         </motion.div>
@@ -118,8 +131,8 @@ export default function HomePage() {
               Ready to Create Your Digital Soul?
             </h2>
             <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-              Join the future of digital identity. Mint your persona, chat with your AI self, and connect your
-              cross-chain assets.
+              Join the future of digital identity. Mint your persona, chat with
+              your AI self, and connect your cross-chain assets.
             </p>
             <Button asChild size="lg" className="neon-glow-magenta">
               <NextLink href="/create">
@@ -131,5 +144,5 @@ export default function HomePage() {
         </div>
       </section>
     </div>
-  )
+  );
 }
