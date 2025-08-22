@@ -1,29 +1,35 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useAccount } from "wagmi"
-import { Card } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Badge } from "@/components/ui/badge"
-import { CheckCircle, AlertCircle, ExternalLink, Link } from "lucide-react"
-import { motion, AnimatePresence } from "framer-motion"
-import { toast } from "sonner"
-import { useOmniSoulContract } from "@/hooks/useContract"
-import ky from "ky"
+import { useState, useEffect } from "react";
+import { useAccount } from "wagmi";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { CheckCircle, AlertCircle, ExternalLink, Link } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
+import { useOmniSoulContract } from "@/hooks/useContract";
+import ky from "ky";
 
 interface EvmVerificationProps {
-  tokenId?: string
+  tokenId?: string;
 }
 
 interface VerificationResult {
-  isOwner: boolean
-  owner: string
-  chain: string
-  nftContract: string
-  tokenId: string
+  isOwner: boolean;
+  owner: string;
+  chain: string;
+  nftContract: string;
+  tokenId: string;
 }
 
 const SUPPORTED_CHAINS = [
@@ -31,28 +37,40 @@ const SUPPORTED_CHAINS = [
   { value: "polygon", label: "Polygon", explorer: "https://polygonscan.com" },
   { value: "bsc", label: "BSC", explorer: "https://bscscan.com" },
   { value: "arbitrum", label: "Arbitrum", explorer: "https://arbiscan.io" },
-  { value: "optimism", label: "Optimism", explorer: "https://optimistic.etherscan.io" },
-]
+  {
+    value: "optimism",
+    label: "Optimism",
+    explorer: "https://optimistic.etherscan.io",
+  },
+];
 
 export function EvmVerification({ tokenId }: EvmVerificationProps) {
-  const { address } = useAccount()
-  const { linkCrossChainAsset, isPending, isConfirming, isConfirmed, error } = useOmniSoulContract()
+  const { address } = useAccount();
+  const {
+    linkCrossChainAsset,
+    isPending,
+    isConfirming,
+    isConfirmed,
+    error,
+    hash,
+  } = useOmniSoulContract();
 
-  const [selectedChain, setSelectedChain] = useState("")
-  const [nftContract, setNftContract] = useState("")
-  const [nftTokenId, setNftTokenId] = useState("")
-  const [isVerifying, setIsVerifying] = useState(false)
-  const [verificationResult, setVerificationResult] = useState<VerificationResult | null>(null)
-  const [isLinking, setIsLinking] = useState(false)
+  const [selectedChain, setSelectedChain] = useState("");
+  const [nftContract, setNftContract] = useState("");
+  const [nftTokenId, setNftTokenId] = useState("");
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [verificationResult, setVerificationResult] =
+    useState<VerificationResult | null>(null);
+  const [isLinking, setIsLinking] = useState(false);
 
   const verifyOwnership = async () => {
     if (!selectedChain || !nftContract || !nftTokenId || !address) {
-      toast.error("Please fill in all fields and connect your wallet")
-      return
+      toast.error("Please fill in all fields and connect your wallet");
+      return;
     }
 
-    setIsVerifying(true)
-    setVerificationResult(null)
+    setIsVerifying(true);
+    setVerificationResult(null);
 
     try {
       const response = await ky
@@ -64,62 +82,103 @@ export function EvmVerification({ tokenId }: EvmVerificationProps) {
             wallet: address,
           },
         })
-        .json<{ success: boolean; data?: VerificationResult; error?: string }>()
+        .json<{
+          success: boolean;
+          data?: VerificationResult;
+          error?: string;
+        }>();
 
       if (response.success && response.data) {
-        setVerificationResult(response.data)
+        setVerificationResult(response.data);
         if (response.data.isOwner) {
-          toast.success("NFT ownership verified!")
+          toast.success("NFT ownership verified!");
         } else {
-          toast.error("You don't own this NFT")
+          toast.error("You don't own this NFT");
         }
       } else {
-        throw new Error(response.error || "Verification failed")
+        throw new Error(response.error || "Verification failed");
       }
     } catch (err) {
-      console.error("Verification error:", err)
-      toast.error("Failed to verify NFT ownership")
+      console.error("Verification error:", err);
+      toast.error("Failed to verify NFT ownership");
     } finally {
-      setIsVerifying(false)
+      setIsVerifying(false);
     }
-  }
+  };
 
   const linkAsset = async () => {
-    if (!verificationResult || !tokenId || !verificationResult.isOwner) {
-      toast.error("Cannot link asset - verification required")
-      return
+    if (
+      !verificationResult ||
+      !tokenId ||
+      !verificationResult.isOwner ||
+      !address
+    ) {
+      toast.error("Cannot link asset - verification required");
+      return;
     }
 
     try {
-      setIsLinking(true)
+      setIsLinking(true);
       linkCrossChainAsset(
         BigInt(tokenId),
         verificationResult.chain,
         verificationResult.nftContract,
         BigInt(verificationResult.tokenId),
-      )
-      toast.success("Linking transaction submitted!")
+        "" // Empty metadata for now
+      );
+      toast.success("Linking transaction submitted!");
     } catch (err) {
-      console.error("Link error:", err)
-      toast.error("Failed to link asset")
+      console.error("Link error:", err);
+      toast.error("Failed to link asset");
     } finally {
-      setIsLinking(false)
+      setIsLinking(false);
     }
-  }
+  };
+
+  // Save linked asset to database after successful blockchain transaction
+  const saveLinkedAsset = async (transactionHash: string) => {
+    if (!verificationResult || !tokenId || !address) return;
+
+    try {
+      await ky.post("/api/omnisoul/link-asset", {
+        json: {
+          tokenId,
+          chainName: verificationResult.chain,
+          assetAddress: verificationResult.nftContract,
+          assetId: verificationResult.tokenId,
+          walletAddress: address,
+          transactionHash,
+          metadata: "",
+        },
+      });
+    } catch (err) {
+      console.error("Failed to save linked asset:", err);
+    }
+  };
+
+  // Call saveLinkedAsset when transaction is confirmed
+  useEffect(() => {
+    if (isConfirmed && hash) {
+      saveLinkedAsset(hash);
+    }
+  }, [isConfirmed, hash]);
 
   const getExplorerUrl = (chain: string, contract: string, tokenId: string) => {
-    const chainData = SUPPORTED_CHAINS.find((c) => c.value === chain)
-    if (!chainData) return ""
-    return `${chainData.explorer}/token/${contract}?a=${tokenId}`
-  }
+    const chainData = SUPPORTED_CHAINS.find((c) => c.value === chain);
+    if (!chainData) return "";
+    return `${chainData.explorer}/token/${contract}?a=${tokenId}`;
+  };
 
   return (
     <Card className="glass p-6">
       <div className="space-y-6">
         <div>
-          <h3 className="text-xl font-bold text-neon-cyan mb-2">Verify EVM NFT</h3>
+          <h3 className="text-xl font-bold text-neon-cyan mb-2">
+            Verify EVM NFT
+          </h3>
           <p className="text-sm text-muted-foreground">
-            Verify ownership of your NFT on Ethereum, Polygon, or other EVM chains
+            Verify ownership of your NFT on Ethereum, Polygon, or other EVM
+            chains
           </p>
         </div>
 
@@ -165,7 +224,9 @@ export function EvmVerification({ tokenId }: EvmVerificationProps) {
 
         <Button
           onClick={verifyOwnership}
-          disabled={isVerifying || !selectedChain || !nftContract || !nftTokenId}
+          disabled={
+            isVerifying || !selectedChain || !nftContract || !nftTokenId
+          }
           className="w-full neon-glow-cyan"
         >
           {isVerifying ? (
@@ -188,7 +249,9 @@ export function EvmVerification({ tokenId }: EvmVerificationProps) {
             >
               <div
                 className={`p-4 rounded-lg border ${
-                  verificationResult.isOwner ? "bg-green-500/10 border-green-500/20" : "bg-red-500/10 border-red-500/20"
+                  verificationResult.isOwner
+                    ? "bg-green-500/10 border-green-500/20"
+                    : "bg-red-500/10 border-red-500/20"
                 }`}
               >
                 <div className="flex items-center space-x-3">
@@ -198,11 +261,20 @@ export function EvmVerification({ tokenId }: EvmVerificationProps) {
                     <AlertCircle className="h-5 w-5 text-red-500" />
                   )}
                   <div className="flex-1">
-                    <p className={`font-medium ${verificationResult.isOwner ? "text-green-500" : "text-red-500"}`}>
-                      {verificationResult.isOwner ? "Ownership Verified!" : "Ownership Not Verified"}
+                    <p
+                      className={`font-medium ${
+                        verificationResult.isOwner
+                          ? "text-green-500"
+                          : "text-red-500"
+                      }`}
+                    >
+                      {verificationResult.isOwner
+                        ? "Ownership Verified!"
+                        : "Ownership Not Verified"}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      Owner: {verificationResult.owner.slice(0, 6)}...{verificationResult.owner.slice(-4)}
+                      Owner: {verificationResult.owner.slice(0, 6)}...
+                      {verificationResult.owner.slice(-4)}
                     </p>
                   </div>
                   <Button
@@ -213,9 +285,9 @@ export function EvmVerification({ tokenId }: EvmVerificationProps) {
                         getExplorerUrl(
                           verificationResult.chain,
                           verificationResult.nftContract,
-                          verificationResult.tokenId,
+                          verificationResult.tokenId
                         ),
-                        "_blank",
+                        "_blank"
                       )
                     }
                     className="h-8 w-8 p-0"
@@ -230,7 +302,9 @@ export function EvmVerification({ tokenId }: EvmVerificationProps) {
                   <div className="flex items-center justify-between p-3 bg-card/50 rounded-lg border">
                     <div>
                       <p className="font-medium">Link to Omni-Soul</p>
-                      <p className="text-sm text-muted-foreground">Connect this NFT to your persona</p>
+                      <p className="text-sm text-muted-foreground">
+                        Connect this NFT to your persona
+                      </p>
                     </div>
                     <Badge variant="outline" className="text-neon-cyan">
                       Token #{tokenId}
@@ -239,7 +313,9 @@ export function EvmVerification({ tokenId }: EvmVerificationProps) {
 
                   <Button
                     onClick={linkAsset}
-                    disabled={isPending || isConfirming || isConfirmed || isLinking}
+                    disabled={
+                      isPending || isConfirming || isConfirmed || isLinking
+                    }
                     className="w-full neon-glow-magenta"
                   >
                     {isPending || isLinking ? (
@@ -271,5 +347,5 @@ export function EvmVerification({ tokenId }: EvmVerificationProps) {
         </AnimatePresence>
       </div>
     </Card>
-  )
+  );
 }
