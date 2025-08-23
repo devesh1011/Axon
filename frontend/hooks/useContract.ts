@@ -52,13 +52,14 @@ export function useOmniSoulContract() {
     tokenId: bigint,
     chainName: string,
     assetAddress: string,
-    assetId: bigint
+    assetId: bigint,
+    metadata: string = ""
   ) => {
     writeContract({
       address: contractAddress,
       abi: omniSoulAbi,
       functionName: "linkCrossChainAsset",
-      args: [tokenId, chainName, assetAddress, assetId],
+      args: [tokenId, chainName, assetAddress, assetId, metadata],
       chainId: zetaChainAthens.id,
     });
   };

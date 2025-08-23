@@ -37,6 +37,9 @@ export function Navbar() {
           <Button asChild variant="ghost" className="hover:text-neon-cyan">
             <NextLink href="/create">Create</NextLink>
           </Button>
+          <Button asChild variant="ghost" className="hover:text-neon-cyan">
+            <NextLink href="/gallery">Gallery</NextLink>
+          </Button>
           <Button asChild variant="ghost" className="hover:text-neon-magenta">
             <NextLink href="/link">Link Assets</NextLink>
           </Button>
