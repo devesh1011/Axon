@@ -31,6 +31,8 @@ Omni-Soul is a revolutionary NFT platform built on ZetaChain that creates digita
 
 ### Frontend (`/frontend`)
 
+sbp_92da2ce3defa28533e08f7424a80264f5f5e651e
+
 - **Next.js 14**: Modern React framework with App Router
 - **TypeScript**: Type-safe development
 - **Tailwind CSS**: Utility-first styling
