@@ -1,138 +1,72 @@
+import { personaChat } from "@/lib/server/personaChat";
+import { StreamingTextResponse, LangChainStream } from "ai";
+import { z } from "zod";
+
+// --- Configuration & Helpers ---
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-import { type NextRequest, NextResponse } from "next/server";
-import {
-  fetchTokenMetadata,
-  getTokenURI,
-} from "../../../../lib/server/viem-server";
+// Zod schema for request validation
+const ChatSchema = z.object({
+  messages: z
+    .array(
+      z.object({
+        role: z.string(),
+        content: z.string(),
+      })
+    )
+    .min(1),
+  tokenId: z.string(),
+});
 
-export async function POST(request: NextRequest) {
+// --- Main API Route ---
+export async function POST(req: Request) {
   try {
-    const body = await request.json();
+    const body = await req.json();
     const validation = ChatSchema.safeParse(body);
 
     if (!validation.success) {
-      return NextResponse.json(
-        {
-          error: {
-            code: "VALIDATION_ERROR",
-            message: "Invalid request data",
-            details: validation.error.issues,
-          },
-        },
+      return new Response(
+        JSON.stringify({
+          error: "Invalid request data",
+          details: validation.error.issues,
+        }),
         { status: 400 }
       );
     }
 
-    const { message, tokenId, conversationHistory } = validation.data;
+    const { messages, tokenId } = validation.data;
 
-    try {
-      // First, verify the token exists and get its metadata
-      const tokenMetadata = await fetchTokenMetadata(tokenId);
-
-      if (!tokenMetadata) {
-        return NextResponse.json(
-          {
-            error: {
-              code: "TOKEN_NOT_FOUND",
-              message: "Persona token not found",
-            },
-          },
+    const response = personaChat(messages, tokenId);
+    return new StreamingTextResponse(stream);
+  } catch (error) {
+    console.error("Chat API error:", error);
+    if (error instanceof Error) {
+      if (error.message.includes("TOKEN_NOT_FOUND")) {
+        return new Response(
+          JSON.stringify({
+            code: "TOKEN_NOT_FOUND",
+            message: "Persona token not found",
+          }),
           { status: 404 }
         );
       }
-
-      // Get the token URI for primary content
-      const tokenURI = await getTokenURI(tokenId);
-
-      // Extract CID from token URI
-      const primaryCid = tokenURI.startsWith("ipfs://")
-        ? tokenURI.replace("ipfs://", "")
-        : tokenURI;
-
-      // Get additional CIDs from metadata if available
-      const linkedCids: string[] = [];
-      if (tokenMetadata.files && Array.isArray(tokenMetadata.files)) {
-        linkedCids.push(
-          ...tokenMetadata.files.map((f: any) => f.cid || f).filter(Boolean)
+      if (error.message.includes("IPFS_ERROR")) {
+        return new Response(
+          JSON.stringify({
+            code: "IPFS_ERROR",
+            message: "Failed to fetch persona data from IPFS",
+          }),
+          { status: 502 }
         );
       }
-
-      // Chat with the persona using LangChain + Gemini
-      const response = await chatWithPersona({
-        tokenURI,
-        primaryCid,
-        linkedCids,
-        question: message,
-        personaName: tokenMetadata.name,
-        personaDescription: tokenMetadata.description,
-      });
-
-      return NextResponse.json({
-        response: response.answer,
-        citations: response.citations,
-        tokenId,
-        timestamp: new Date().toISOString(),
-        conversationId: `${tokenId}-${Date.now()}`, // Simple conversation ID
-      });
-    } catch (error) {
-      console.error("AI chat error:", error);
-
-      if (error instanceof Error) {
-        if (error.message.includes("Token not found")) {
-          return NextResponse.json(
-            {
-              error: {
-                code: "TOKEN_NOT_FOUND",
-                message: "Persona token not found",
-              },
-            },
-            { status: 404 }
-          );
-        }
-
-        if (error.message.includes("IPFS")) {
-          return NextResponse.json(
-            {
-              error: {
-                code: "IPFS_ERROR",
-                message: "Failed to fetch persona data from IPFS",
-              },
-            },
-            { status: 502 }
-          );
-        }
-      }
-
-      return NextResponse.json(
-        {
-          error: {
-            code: "AI_ERROR",
-            message: "Failed to generate AI response",
-          },
-        },
-        { status: 500 }
-      );
     }
-  } catch (error) {
-    console.error("Chat API error:", error);
-
-    if (error instanceof Error && error.message.includes("Rate limit")) {
-      return NextResponse.json(
-        { error: { code: "RATE_LIMITED", message: error.message } },
-        { status: 429 }
-      );
-    }
-
-    return NextResponse.json(
-      {
-        error: {
-          code: "CHAT_FAILED",
-          message: "Failed to process chat request",
-        },
-      },
+    return new Response(
+      JSON.stringify({
+        code: "CHAT_FAILED",
+        message: "Failed to process chat request",
+      }),
       { status: 500 }
     );
   }
