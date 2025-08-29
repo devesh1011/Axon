@@ -69,6 +69,7 @@ export async function POST(req: NextRequest) {
     }
 
     const personaKey = `persona:${tokenId}`;
+    console.log(tokenId, personaKey);
     const result = await docEmbeddings(newFilesToProcess, tokenId, personaKey);
 
     if (!result.success) {
