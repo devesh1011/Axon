@@ -57,6 +57,8 @@ export default function CreatePage() {
   const [nftImage, setNftImage] = useState<SelectedFile | null>(null);
   const [mintedTokenId, setMintedTokenId] = useState<string>("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isPostProcessing, setIsPostProcessing] = useState(false);
+  const [isFullyComplete, setIsFullyComplete] = useState(false);
   const [createdTokenURI, setCreatedTokenURI] = useState<string>("");
 
   // Function to extract token ID from transaction receipt
@@ -64,45 +66,23 @@ export default function CreatePage() {
     try {
       const receiptData = receipt as { logs?: Array<{ topics?: string[] }> };
       if (!receiptData?.logs) return null;
-
-      // Look for Transfer event: Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
-      // The Transfer event signature hash is: 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef
       const transferEventSignature =
         "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
-
       for (const log of receiptData.logs) {
-        if (log.topics && log.topics[0] === transferEventSignature) {
-          // For NFT Transfer events:
-          // topics[0] = event signature
-          // topics[1] = from address (indexed)
-          // topics[2] = to address (indexed)
-          // topics[3] = tokenId (indexed)
-          if (log.topics[3]) {
-            const tokenId = BigInt(log.topics[3]).toString();
-            console.log("Extracted token ID from receipt:", tokenId);
-            return tokenId;
-          }
+        if (
+          log.topics &&
+          log.topics[0] === transferEventSignature &&
+          log.topics[3]
+        ) {
+          return BigInt(log.topics[3]).toString();
         }
       }
       return null;
-    } catch (error) {
-      console.error("Error extracting token ID from receipt:", error);
+    } catch (e) {
+      console.error("Error extracting token ID:", e);
       return null;
     }
   };
-
-  // Handle minting completion
-  useEffect(() => {
-    if (isConfirmed && hash && createdTokenURI && !mintedTokenId) {
-      // TODO: Extract actual token ID from transaction receipt
-      // For now, we'll create a timestamp-based ID since we can't easily get the return value
-      // In production, you'd want to parse the transaction receipt for the Transfer event
-      const timestampTokenId = Date.now().toString();
-      setMintedTokenId(timestampTokenId);
-      toast.success(`Omni-Soul NFT minted successfully! Transaction: ${hash}`);
-      setIsProcessing(false);
-    }
-  }, [isConfirmed, hash, createdTokenURI, mintedTokenId]);
 
   // Handle minting errors
   useEffect(() => {
@@ -110,8 +90,10 @@ export default function CreatePage() {
       console.error("Minting error:", error);
       toast.error(`Minting failed: ${error.message}`);
       setIsProcessing(false);
+      setIsPostProcessing(false);
     }
   }, [error]);
+
   const [personalData, setPersonalData] = useState<PersonalData>({
     name: "",
     description: "",
@@ -136,89 +118,82 @@ export default function CreatePage() {
   };
 
   const handleNftImageSelected = (file: File) => {
-    // Validate that it's an image
     if (!file.type.startsWith("image/")) {
       toast.error("Please select an image file for the NFT");
       return;
     }
-
-    setNftImage({
-      file,
-      name: file.name,
-      type: file.type,
-      size: file.size,
-    });
+    setNftImage({ file, name: file.name, type: file.type, size: file.size });
   };
 
   const handleCreateOmniSoul = async () => {
-    if (!address) {
-      toast.error("Please connect your wallet first");
+    if (
+      !address ||
+      !personalData.name ||
+      !personalData.description ||
+      !nftImage
+    ) {
+      toast.error("Please provide a name, description, and an NFT image.");
       return;
     }
-
-    if (!personalData.name || !personalData.description) {
-      toast.error(
-        "Please provide at least a name and description for your Omni-Soul"
-      );
-      return;
-    }
-
     setIsProcessing(true);
+    try {
+      const placeholderTokenURI = `data:application/json;base64,${btoa(
+        JSON.stringify({
+          name: personalData.name,
+          description: personalData.description,
+        })
+      )}`;
+      toast.info("Please confirm the transaction in your wallet...");
+      mintOmniSoul(address as `0x${string}`, placeholderTokenURI);
+    } catch (e) {
+      toast.error(
+        `Failed to initiate mint: ${
+          e instanceof Error ? e.message : "Unknown error"
+        }`
+      );
+      setIsProcessing(false);
+    }
+  };
+
+  const handlePostTransactionProcessing = async (
+    tokenId: string,
+    txHash: string
+  ) => {
+    setIsPostProcessing(true);
+    toast.info("Transaction confirmed! Setting up your Omni-Soul...");
 
     try {
-      // Step 1: Upload files to IPFS (if any)
+      let nftImageCID = "";
+      if (nftImage) {
+        const imageFormData = new FormData();
+        imageFormData.append("file", nftImage.file);
+        const imageResponse = await fetch("/api/ipfs/upload", {
+          method: "POST",
+          body: imageFormData,
+        });
+        const imageResult = await imageResponse.json();
+        if (!imageResult.success)
+          throw new Error("Failed to upload NFT image.");
+        nftImageCID = imageResult.data.cid;
+        toast.success("NFT image uploaded!");
+      }
+
       const uploadedFileCIDs: Array<{
         cid: string;
         name: string;
         type: string;
       }> = [];
-
-      // Upload NFT image first
-      let nftImageCID = "";
-      if (nftImage) {
-        console.log("Uploading NFT image to IPFS...");
-        toast.info("Uploading NFT image to IPFS...");
-
-        const imageFormData = new FormData();
-        imageFormData.append("file", nftImage.file);
-        imageFormData.append("pinName", `omni-soul-image-${nftImage.name}`);
-
-        const imageResponse = await fetch("/api/ipfs/upload", {
-          method: "POST",
-          body: imageFormData,
-        });
-
-        const imageResult = await imageResponse.json();
-
-        if (imageResult.success && imageResult.data) {
-          nftImageCID = imageResult.data.cid;
-          console.log("NFT image uploaded successfully:", nftImageCID);
-          toast.success("NFT image uploaded to IPFS successfully!");
-        } else {
-          throw new Error(`Failed to upload NFT image: ${imageResult.error}`);
-        }
-      } else {
-        toast.error("Please select an NFT image");
-        return;
-      }
-
-      // Upload additional files
       if (selectedFiles.length > 0) {
-        console.log("Uploading additional files to IPFS...");
-        toast.info("Uploading additional files to IPFS...");
-
+        toast.info(`Uploading ${selectedFiles.length} additional files...`);
         for (const fileData of selectedFiles) {
           const formData = new FormData();
           formData.append("file", fileData.file);
           formData.append("pinName", `omni-soul-${fileData.name}`);
-
           const response = await fetch("/api/ipfs/upload", {
             method: "POST",
             body: formData,
           });
-
           const result = await response.json();
-
           if (result.success && result.data) {
             uploadedFileCIDs.push({
               cid: result.data.cid,
@@ -226,38 +201,24 @@ export default function CreatePage() {
               type: fileData.type,
             });
           } else {
-            throw new Error(
-              `Failed to upload ${fileData.name}: ${result.error}`
-            );
+            console.warn(`Failed to upload ${fileData.name}, skipping.`);
           }
         }
-        console.log("Files uploaded successfully:", uploadedFileCIDs);
-        toast.success("Files uploaded to IPFS successfully!");
+        toast.success("Additional files uploaded!");
       }
 
-      // Step 2: Create metadata and mint NFT on blockchain
-      console.log("Creating metadata...");
-      toast.info("Creating metadata...");
-
+      toast.info("Creating final metadata...");
       const metadataResponse = await fetch("/api/nft/metadata", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           metadata: {
             name: personalData.name,
             description: personalData.description,
             image: `ipfs://${nftImageCID}`,
             attributes: [
-              {
-                trait_type: "Type",
-                value: "Omni-Soul",
-              },
-              {
-                trait_type: "Files Uploaded",
-                value: uploadedFileCIDs.length,
-              },
+              { trait_type: "Type", value: "Omni-Soul" },
+              { trait_type: "Files Uploaded", value: uploadedFileCIDs.length },
               ...(personalData.interests.length > 0
                 ? [
                     {
@@ -283,167 +244,163 @@ export default function CreatePage() {
                   ]
                 : []),
             ],
-            personalData: {
-              bio: personalData.bio,
-              background: personalData.background,
-              interests: personalData.interests,
-              goals: personalData.goals,
-              personality_traits: personalData.personality_traits,
-            },
+            personalData: personalData,
             uploadedFiles: uploadedFileCIDs,
           },
         }),
       });
-
       const metadataResult = await metadataResponse.json();
-
-      if (!metadataResult.success) {
+      if (!metadataResult.success)
         throw new Error(
           metadataResult.error?.message || "Failed to create metadata"
         );
-      }
-
-      console.log("Metadata created successfully:", metadataResult.tokenURI);
+      const finalTokenURI = metadataResult.tokenURI;
+      setCreatedTokenURI(finalTokenURI);
       toast.success("Metadata created successfully!");
 
-      // Store the tokenURI for the minting process
-      setCreatedTokenURI(metadataResult.tokenURI);
+      await saveNFTToDatabase(tokenId, txHash, finalTokenURI);
+      toast.success("NFT record saved to database!");
 
-      // Step 3: Mint NFT using user's wallet
-      console.log("Initiating NFT mint...");
-      console.log("Minting to address:", address);
-      console.log("TokenURI:", metadataResult.tokenURI);
-      toast.info("Please confirm the transaction in your wallet...");
+      // --- CRITICAL CHANGE: Link Token ID to Embeddings ---
+      if (selectedFiles.length > 0) {
+        toast.info("Processing persona files for AI...");
+        try {
+          const formData = new FormData();
+          // This is the key step: sending the tokenId with the files.
+          formData.append("tokenId", tokenId);
+          selectedFiles.forEach((fileData) => {
+            formData.append("files", fileData.file, fileData.name);
+          });
 
-      if (!address) {
-        throw new Error("Wallet address not found");
+          const embeddingsResponse = await fetch("/api/ai/embeddings", {
+            method: "POST",
+            body: formData,
+          });
+
+          const embeddingsResult = await embeddingsResponse.json();
+          if (embeddingsResult.success) {
+            toast.success(
+              `AI processing complete: ${
+                embeddingsResult.newFilesProcessed || 0
+              } new documents stored.`
+            );
+          } else {
+            toast.warning(
+              `Could not process files for AI: ${embeddingsResult.error}`
+            );
+          }
+        } catch (err) {
+          console.error("Error during embeddings processing:", err);
+          toast.error("An error occurred while processing persona files.");
+        }
       }
 
-      console.log("Minting NFT...");
-      mintOmniSoul(address as `0x${string}`, metadataResult.tokenURI);
+      setIsFullyComplete(true);
+      toast.success(`OmniSoul fully created! Token ID: ${tokenId}`);
     } catch (error) {
-      console.error("Error creating Omni-Soul:", error);
       toast.error(
-        `Failed to create Omni-Soul: ${
+        `Post-processing failed: ${
           error instanceof Error ? error.message : "Unknown error"
         }`
       );
-      setIsProcessing(false);
+    } finally {
+      setIsPostProcessing(false);
     }
   };
 
-  // Effect to handle transaction confirmation and navigation
   useEffect(() => {
-    if (isConfirmed && receipt && createdTokenURI) {
-      console.log("Transaction confirmed with receipt:", receipt);
-
-      // Extract the actual token ID from the transaction receipt
+    if (isConfirmed && receipt && !mintedTokenId) {
       const extractedTokenId = extractTokenIdFromReceipt(receipt);
-
       if (extractedTokenId) {
-        console.log("Successfully minted with token ID:", extractedTokenId);
         setMintedTokenId(extractedTokenId);
-
-        // Save NFT to database
-        saveNFTToDatabase(extractedTokenId, receipt.transactionHash);
-
-        toast.success(
-          `OmniSoul minted successfully! Token ID: ${extractedTokenId}`
-        );
-
-        // Navigate to the minted persona page
-        router.push(`/persona/${extractedTokenId}`);
         setIsProcessing(false);
+        handlePostTransactionProcessing(
+          extractedTokenId,
+          (receipt as any).transactionHash
+        );
       } else {
-        console.error("Failed to extract token ID from transaction receipt");
-        toast.error("Failed to extract token ID from transaction");
+        toast.error("Failed to extract token ID from transaction.");
         setIsProcessing(false);
       }
     }
-  }, [isConfirmed, receipt, createdTokenURI, router]);
+  }, [isConfirmed, receipt, mintedTokenId]);
 
-  // Function to save NFT to database after blockchain confirmation
-  const saveNFTToDatabase = async (tokenId: string, txHash: string) => {
+  const saveNFTToDatabase = async (
+    tokenId: string,
+    txHash: string,
+    finalTokenURI: string
+  ) => {
     try {
       const response = await fetch("/api/nft/save", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           tokenId,
           transactionHash: txHash,
-          tokenURI: createdTokenURI,
+          tokenURI: finalTokenURI,
           walletAddress: address,
         }),
       });
-
       const result = await response.json();
       if (!result.success) {
-        console.error("Failed to save NFT to database:", result.error);
+        // Throw an error to be caught by the main handler
+        throw new Error(result.error || "Failed to save NFT to database.");
       }
-    } catch (error) {
-      console.error("Error saving NFT to database:", error);
+    } catch (e) {
+      console.error("Error in saveNFTToDatabase:", e);
+      // Re-throw the error to ensure the main handler catches it
+      throw e;
     }
   };
 
-  // Effect to handle transaction errors
   useEffect(() => {
-    if (error) {
-      console.error("Transaction error:", error);
-      toast.error(`Transaction failed: ${error.message}`);
-      setIsProcessing(false);
+    if (isFullyComplete && mintedTokenId) {
+      setTimeout(() => {
+        router.push(`/persona/${mintedTokenId}`);
+      }, 2000);
     }
-  }, [error]);
+  }, [isFullyComplete, mintedTokenId, router]);
 
   const addInterest = () => {
     if (newInterest.trim()) {
-      setPersonalData((prev) => ({
-        ...prev,
-        interests: [...prev.interests, newInterest.trim()],
+      setPersonalData((p) => ({
+        ...p,
+        interests: [...p.interests, newInterest.trim()],
       }));
       setNewInterest("");
     }
   };
-
   const removeInterest = (index: number) => {
-    setPersonalData((prev) => ({
-      ...prev,
-      interests: prev.interests.filter((_, i) => i !== index),
+    setPersonalData((p) => ({
+      ...p,
+      interests: p.interests.filter((_, i) => i !== index),
     }));
   };
-
   const addGoal = () => {
     if (newGoal.trim()) {
-      setPersonalData((prev) => ({
-        ...prev,
-        goals: [...prev.goals, newGoal.trim()],
-      }));
+      setPersonalData((p) => ({ ...p, goals: [...p.goals, newGoal.trim()] }));
       setNewGoal("");
     }
   };
-
   const removeGoal = (index: number) => {
-    setPersonalData((prev) => ({
-      ...prev,
-      goals: prev.goals.filter((_, i) => i !== index),
+    setPersonalData((p) => ({
+      ...p,
+      goals: p.goals.filter((_, i) => i !== index),
     }));
   };
-
   const addTrait = () => {
     if (newTrait.trim()) {
-      setPersonalData((prev) => ({
-        ...prev,
-        personality_traits: [...prev.personality_traits, newTrait.trim()],
+      setPersonalData((p) => ({
+        ...p,
+        personality_traits: [...p.personality_traits, newTrait.trim()],
       }));
       setNewTrait("");
     }
   };
-
   const removeTrait = (index: number) => {
-    setPersonalData((prev) => ({
-      ...prev,
-      personality_traits: prev.personality_traits.filter((_, i) => i !== index),
+    setPersonalData((p) => ({
+      ...p,
+      personality_traits: p.personality_traits.filter((_, i) => i !== index),
     }));
   };
 
@@ -493,7 +450,7 @@ export default function CreatePage() {
                         className={`
                           w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-300
                           ${
-                            mintedTokenId
+                            isFullyComplete
                               ? "bg-gradient-to-r from-neon-cyan to-neon-magenta text-background neon-glow-cyan"
                               : step.number === 1
                               ? "bg-gradient-to-r from-neon-cyan to-neon-magenta text-background neon-glow-cyan"
@@ -501,9 +458,9 @@ export default function CreatePage() {
                           }
                         `}
                       >
-                        {mintedTokenId && step.number === 1 ? (
+                        {isFullyComplete && step.number === 1 ? (
                           <CheckCircle className="h-5 w-5" />
-                        ) : mintedTokenId && step.number === 2 ? (
+                        ) : isFullyComplete && step.number === 2 ? (
                           <CheckCircle className="h-5 w-5" />
                         ) : (
                           step.number
@@ -512,7 +469,7 @@ export default function CreatePage() {
                       <div className="min-w-[160px] max-w-[220px]">
                         <p
                           className={`font-medium ${
-                            mintedTokenId || step.number === 1
+                            isFullyComplete || step.number === 1
                               ? "text-foreground"
                               : "text-muted-foreground"
                           }`}
@@ -534,8 +491,8 @@ export default function CreatePage() {
 
             {/* Main Content */}
             <div className="space-y-8">
-              {/* Single Form - Only show if not minted */}
-              {!mintedTokenId && (
+              {/* Single Form - Only show if not fully complete */}
+              {!isFullyComplete && (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -564,6 +521,7 @@ export default function CreatePage() {
                           }}
                           className="hidden"
                           id="nft-image-upload"
+                          disabled={isProcessing || isPostProcessing}
                         />
                         <label
                           htmlFor="nft-image-upload"
@@ -603,6 +561,7 @@ export default function CreatePage() {
                               variant="ghost"
                               size="sm"
                               onClick={() => setNftImage(null)}
+                              disabled={isProcessing || isPostProcessing}
                             >
                               <X className="h-4 w-4" />
                             </Button>
@@ -638,6 +597,7 @@ export default function CreatePage() {
                           }}
                           className="hidden"
                           id="file-upload"
+                          disabled={isProcessing || isPostProcessing}
                         />
                         <label htmlFor="file-upload" className="cursor-pointer">
                           <div className="flex flex-col items-center space-y-2">
@@ -682,6 +642,7 @@ export default function CreatePage() {
                                     files.filter((_, i) => i !== index)
                                   );
                                 }}
+                                disabled={isProcessing || isPostProcessing}
                               >
                                 <X className="h-4 w-4" />
                               </Button>
@@ -719,6 +680,7 @@ export default function CreatePage() {
                                   name: e.target.value,
                                 }))
                               }
+                              disabled={isProcessing || isPostProcessing}
                             />
                           </div>
                           <div>
@@ -734,6 +696,7 @@ export default function CreatePage() {
                                   description: e.target.value,
                                 }))
                               }
+                              disabled={isProcessing || isPostProcessing}
                             />
                           </div>
                         </div>
@@ -752,6 +715,7 @@ export default function CreatePage() {
                               }))
                             }
                             rows={3}
+                            disabled={isProcessing || isPostProcessing}
                           />
                         </div>
 
@@ -769,6 +733,7 @@ export default function CreatePage() {
                               }))
                             }
                             rows={3}
+                            disabled={isProcessing || isPostProcessing}
                           />
                         </div>
 
@@ -785,11 +750,13 @@ export default function CreatePage() {
                               onKeyPress={(e) =>
                                 e.key === "Enter" && addInterest()
                               }
+                              disabled={isProcessing || isPostProcessing}
                             />
                             <Button
                               type="button"
                               onClick={addInterest}
                               size="sm"
+                              disabled={isProcessing || isPostProcessing}
                             >
                               <Plus className="h-4 w-4" />
                             </Button>
@@ -802,7 +769,10 @@ export default function CreatePage() {
                                 className="flex items-center gap-1"
                               >
                                 {interest}
-                                <button onClick={() => removeInterest(index)}>
+                                <button
+                                  onClick={() => removeInterest(index)}
+                                  disabled={isProcessing || isPostProcessing}
+                                >
                                   <X className="h-3 w-3" />
                                 </button>
                               </Badge>
@@ -821,8 +791,14 @@ export default function CreatePage() {
                               value={newGoal}
                               onChange={(e) => setNewGoal(e.target.value)}
                               onKeyPress={(e) => e.key === "Enter" && addGoal()}
+                              disabled={isProcessing || isPostProcessing}
                             />
-                            <Button type="button" onClick={addGoal} size="sm">
+                            <Button
+                              type="button"
+                              onClick={addGoal}
+                              size="sm"
+                              disabled={isProcessing || isPostProcessing}
+                            >
                               <Plus className="h-4 w-4" />
                             </Button>
                           </div>
@@ -834,7 +810,10 @@ export default function CreatePage() {
                                 className="flex items-center gap-1"
                               >
                                 {goal}
-                                <button onClick={() => removeGoal(index)}>
+                                <button
+                                  onClick={() => removeGoal(index)}
+                                  disabled={isProcessing || isPostProcessing}
+                                >
                                   <X className="h-3 w-3" />
                                 </button>
                               </Badge>
@@ -855,8 +834,14 @@ export default function CreatePage() {
                               onKeyPress={(e) =>
                                 e.key === "Enter" && addTrait()
                               }
+                              disabled={isProcessing || isPostProcessing}
                             />
-                            <Button type="button" onClick={addTrait} size="sm">
+                            <Button
+                              type="button"
+                              onClick={addTrait}
+                              size="sm"
+                              disabled={isProcessing || isPostProcessing}
+                            >
                               <Plus className="h-4 w-4" />
                             </Button>
                           </div>
@@ -869,7 +854,10 @@ export default function CreatePage() {
                                   className="flex items-center gap-1"
                                 >
                                   {trait}
-                                  <button onClick={() => removeTrait(index)}>
+                                  <button
+                                    onClick={() => removeTrait(index)}
+                                    disabled={isProcessing || isPostProcessing}
+                                  >
                                     <X className="h-3 w-3" />
                                   </button>
                                 </Badge>
@@ -888,8 +876,9 @@ export default function CreatePage() {
                         Ready to Create Your Omni-Soul?
                       </h3>
                       <p className="text-muted-foreground">
-                        This will upload your files, create metadata, and mint
-                        your NFT in one step
+                        {mintedTokenId && isPostProcessing
+                          ? "Transaction confirmed! Setting up your files and metadata..."
+                          : "This will mint your NFT first, then setup your files and metadata"}
                       </p>
 
                       <Button
@@ -898,16 +887,18 @@ export default function CreatePage() {
                           isProcessing ||
                           isPending ||
                           isConfirming ||
+                          isPostProcessing ||
                           !personalData.name ||
-                          !personalData.description
+                          !personalData.description ||
+                          !nftImage
                         }
                         className="w-full max-w-md bg-gradient-to-r from-neon-cyan to-neon-magenta hover:opacity-90 text-background font-bold py-3"
                         size="lg"
                       >
-                        {isProcessing ? (
+                        {isPostProcessing ? (
                           <>
                             <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                            Creating Metadata...
+                            Setting up files & metadata...
                           </>
                         ) : isPending ? (
                           <>
@@ -931,8 +922,8 @@ export default function CreatePage() {
                 </motion.div>
               )}
 
-              {/* Success State */}
-              {mintedTokenId && (
+              {/* Success State - Only show when everything is complete */}
+              {isFullyComplete && mintedTokenId && (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -950,8 +941,8 @@ export default function CreatePage() {
                         </h3>
                         <p className="text-lg text-muted-foreground mb-4">
                           Your Omni-Soul has been successfully minted on
-                          ZetaChain! You can view the transaction on the
-                          blockchain explorer.
+                          ZetaChain! All files have been uploaded and metadata
+                          has been created.
                         </p>
                         <div className="space-y-2">
                           <Badge variant="secondary" className="text-sm">
@@ -960,7 +951,7 @@ export default function CreatePage() {
                           </Badge>
                           <br />
                           <Badge variant="outline" className="text-sm">
-                            Reference ID: {mintedTokenId}
+                            Token ID: {mintedTokenId}
                           </Badge>
                         </div>
                       </div>
