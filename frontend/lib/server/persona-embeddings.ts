@@ -127,15 +127,16 @@ export async function docEmbeddings(
   try {
     for (let i = 0; i < documents.length; i += BATCH_SIZE) {
       const batch = documents.slice(i, i + BATCH_SIZE);
-
-      // Sanitize each document's pageContent within the batch
-      const sanitizedBatch = batch.map((doc) => ({
-        ...doc,
-        pageContent: doc.pageContent.replace(/\u0000/g, ""),
+      const rows = batch.map((doc) => ({
+        content: doc.pageContent,
+        metadata: doc.metadata,
+        token_id: doc.metadata.token_id,
+        persona_key: doc.metadata.persona_key,
+        chunk_hash: doc.metadata.chunk_hash,
       }));
-
-      await store.addDocuments(sanitizedBatch);
-      inserted += sanitizedBatch.length;
+      const { error } = await supabase.from("persona_vectors").insert(rows);
+      if (error) throw error;
+      inserted += batch.length;
     }
 
     console.log(
