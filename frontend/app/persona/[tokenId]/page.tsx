@@ -121,6 +121,16 @@ export default function PersonaPage() {
     }
   };
 
+  // Convert various ipfs:// or raw cid forms to an HTTP gateway URL
+  const toIpfsUrl = (uri: string | undefined) => {
+    if (!uri) return "";
+    if (/^https?:\/\//i.test(uri)) return uri;
+    const cleaned = uri.replace(/^ipfs:\/\//i, "").replace(/^\/?ipfs\//i, "");
+    const gateway =
+      process.env.NEXT_PUBLIC_IPFS_GATEWAY || "https://gateway.pinata.cloud";
+    return `${gateway}/ipfs/${cleaned}`;
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
@@ -196,8 +206,18 @@ export default function PersonaPage() {
               {/* Persona Card */}
               <Card className="glass p-6">
                 <div className="flex items-start space-x-6">
-                  <div className="w-24 h-24 bg-gradient-to-br from-neon-cyan to-neon-magenta rounded-full flex items-center justify-center flex-shrink-0">
-                    <Brain className="h-12 w-12 text-background" />
+                  <div className="w-24 h-24 bg-gradient-to-br from-neon-cyan to-neon-magenta rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+                    {tokenData.metadata.image ? (
+                      // show image
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={toIpfsUrl(tokenData.metadata.image)}
+                        alt={tokenData.metadata.name}
+                        className="object-cover w-full h-full"
+                      />
+                    ) : (
+                      <Brain className="h-12 w-12 text-background" />
+                    )}
                   </div>
                   <div className="flex-1">
                     <h3 className="text-2xl font-bold mb-2">
