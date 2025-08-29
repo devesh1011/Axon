@@ -1,3 +1,4 @@
+// /api/nft/save/route.ts
 export const runtime = "nodejs";
 
 import { type NextRequest, NextResponse } from "next/server";
@@ -10,134 +11,123 @@ interface SaveNFTRequest {
   walletAddress: string;
 }
 
+// Helper function to get or create a wallet profile and return its ID
+async function getOrCreateProfileId(walletAddress: string): Promise<string> {
+  const lowercasedAddress = walletAddress.toLowerCase();
+
+  // First, try to fetch the existing profile
+  const { data: existingProfile, error: selectError } = await supabase
+    .from("wallet_profiles")
+    .select("id")
+    .eq("wallet_address", lowercasedAddress)
+    .single();
+
+  // If a profile is found, return its ID
+  if (existingProfile) {
+    return existingProfile.id;
+  }
+
+  // If the error is anything other than "no rows found", something went wrong
+  if (selectError && selectError.code !== "PGRST116") {
+    console.error("Error fetching wallet profile:", selectError);
+    throw new Error("Failed to fetch user profile.");
+  }
+
+  // If no profile was found, create a new one
+  const { data: newProfile, error: insertError } = await supabase
+    .from("wallet_profiles")
+    .insert({
+      wallet_address: lowercasedAddress,
+      display_name: `User ${lowercasedAddress.slice(
+        0,
+        6
+      )}...${lowercasedAddress.slice(-4)}`,
+    })
+    .select("id")
+    .single();
+
+  if (insertError) {
+    console.error("Error creating wallet profile:", insertError);
+    throw new Error("Failed to create user profile.");
+  }
+
+  return newProfile.id;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body: SaveNFTRequest = await request.json();
     const { tokenId, transactionHash, tokenURI, walletAddress } = body;
 
-    // Validate required fields
     if (!tokenId || !transactionHash || !tokenURI || !walletAddress) {
       return NextResponse.json(
         {
-          error: {
-            code: "VALIDATION_ERROR",
-            message:
-              "Token ID, transaction hash, token URI, and wallet address are required",
-          },
+          error:
+            "Token ID, transaction hash, token URI, and wallet address are required.",
         },
         { status: 400 }
       );
     }
-
-    // Validate Ethereum address format
     if (!/^0x[a-fA-F0-9]{40}$/.test(walletAddress)) {
       return NextResponse.json(
-        {
-          error: {
-            code: "VALIDATION_ERROR",
-            message: "Invalid Ethereum address format",
-          },
-        },
+        { error: "Invalid Ethereum address format." },
         { status: 400 }
       );
     }
 
-    // Get or create wallet profile
-    let profile;
+    // 1. Get the profile ID for the user
+    const profileId = await getOrCreateProfileId(walletAddress);
 
-    const { data: existingProfile, error: profileError } = await supabase
-      .from("wallet_profiles")
-      .select("id")
-      .eq("wallet_address", walletAddress.toLowerCase())
-      .single();
-
-    if (profileError && profileError.code !== "PGRST116") {
-      console.error("Error fetching profile:", profileError);
-      return NextResponse.json(
-        {
-          error: {
-            code: "PROFILE_ERROR",
-            message: "Failed to fetch user profile",
-          },
-        },
-        { status: 500 }
-      );
-    }
-
-    if (existingProfile) {
-      profile = existingProfile;
-    } else {
-      // If profile doesn't exist, create one
-      const { data: newProfile, error: createProfileError } = await supabase
-        .from("wallet_profiles")
-        .insert({
-          wallet_address: walletAddress.toLowerCase(),
-          display_name: `User ${walletAddress.slice(
-            0,
-            6
-          )}...${walletAddress.slice(-4)}`,
-        })
-        .select("id")
-        .single();
-
-      if (createProfileError) {
-        console.error("Error creating profile:", createProfileError);
-        return NextResponse.json(
-          {
-            error: {
-              code: "PROFILE_ERROR",
-              message: "Failed to create user profile",
-            },
-          },
-          { status: 500 }
-        );
-      }
-      profile = newProfile;
-    }
-
-    // Extract metadata from tokenURI to get basic info
-    let metadata = null;
+    // 2. Fetch metadata from IPFS to enrich the NFT record
+    let metadata: any = {};
     try {
       if (tokenURI.startsWith("ipfs://")) {
         const cid = tokenURI.replace("ipfs://", "");
-        const metadataUrl = `${process.env.PINATA_GATEWAY}/ipfs/${cid}`;
+        // Ensure you have PINATA_GATEWAY in your .env file
+        const metadataUrl = `${
+          process.env.PINATA_GATEWAY || "https://gateway.pinata.cloud"
+        }/ipfs/${cid}`;
         const response = await fetch(metadataUrl);
-        metadata = await response.json();
+        if (response.ok) {
+          metadata = await response.json();
+        } else {
+          console.warn(`Failed to fetch metadata from IPFS for CID: ${cid}`);
+        }
       }
     } catch (error) {
-      console.error("Failed to fetch metadata:", error);
+      console.error("Failed to fetch or parse metadata:", error);
+      // Don't block saving the NFT if metadata fetch fails
     }
 
-    // Save NFT data to Supabase
+    // 3. Save the NFT data using `upsert` for robustness
+    // This will create a new record or update an existing one based on the `token_id`.
     const { data: nftData, error: supabaseError } = await supabase
       .from("nfts")
-      .insert({
-        profile_id: profile.id,
-        token_id: tokenId,
-        name: metadata?.name || `Omni-Soul #${tokenId}`,
-        description: metadata?.description || "Omni-Soul NFT",
-        metadata_uri: tokenURI,
-        pinata_cid: tokenURI.replace("ipfs://", ""),
-        image_cid: metadata?.image?.replace("ipfs://", "") || null,
-        wallet_address: walletAddress.toLowerCase(),
-        transaction_hash: transactionHash,
-        uploaded_files:
-          metadata?.uploadedFiles?.map(
-            (f: Record<string, unknown>) => (f as { cid: string }).cid
-          ) || [],
-      })
+      .upsert(
+        {
+          profile_id: profileId,
+          token_id: tokenId,
+          name: metadata?.name || `Omni-Soul #${tokenId}`,
+          description: metadata?.description || "An Omni-Soul NFT.",
+          metadata_uri: tokenURI,
+          pinata_cid: tokenURI.replace("ipfs://", ""),
+          image_cid: metadata?.image?.replace("ipfs://", "") || null,
+          wallet_address: walletAddress.toLowerCase(),
+          transaction_hash: transactionHash,
+          // NOTE: The `uploaded_files` column has been removed from this insert.
+          // The `persona_embeddings` table is the single source of truth for this relationship.
+        },
+        {
+          onConflict: "token_id", // Specify the column to check for conflicts
+        }
+      )
       .select()
       .single();
 
     if (supabaseError) {
-      console.error("Supabase error:", supabaseError);
+      console.error("Supabase error while saving NFT:", supabaseError);
       return NextResponse.json(
-        {
-          error: {
-            code: "DATABASE_ERROR",
-            message: "Failed to save NFT to database",
-          },
-        },
+        { error: "Failed to save NFT to database." },
         { status: 500 }
       );
     }
@@ -145,12 +135,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: nftData,
-      message: "NFT saved to database successfully",
+      message: "NFT saved successfully.",
     });
   } catch (error) {
-    console.error("Save NFT error:", error);
+    console.error("An unexpected error occurred in /api/nft/save:", error);
     return NextResponse.json(
-      { success: false, error: "Failed to save NFT to database" },
+      { success: false, error: (error as Error).message },
       { status: 500 }
     );
   }
