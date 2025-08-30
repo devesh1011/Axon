@@ -1,123 +1,127 @@
-"use client"
+"use client";
 
-import type React from "react"
-
-import { useState, useRef, useEffect } from "react"
-import { Card } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Badge } from "@/components/ui/badge"
-import { Send, Bot, User, Loader2 } from "lucide-react"
-import { motion, AnimatePresence } from "framer-motion"
-import { toast } from "sonner"
-import ky from "ky"
-
-interface Message {
-  id: string
-  type: "user" | "assistant"
-  content: string
-  timestamp: Date
-  sources?: Array<{ content: string; metadata: any }>
-}
-
-interface ChatPanelProps {
-  tokenId: string
-  personaName: string
-}
+import { useState, useRef, useEffect } from "react";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Send, Bot, Loader2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
+import { Message, ChatPanelProps } from "@/lib/types";
 
 export function ChatPanel({ tokenId, personaName }: ChatPanelProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
-      id: "welcome",
-      type: "assistant",
-      content: `Hello! I'm ${personaName}, your AI persona. Ask me anything about the content I was trained on!`,
-      timestamp: new Date(),
+      id: "welcome-message",
+      role: "assistant",
+      content: `Hello! I'm ${personaName}. Ask me anything about the documents I've been trained on.`,
+      parts: [
+        {
+          type: "text",
+          text: `Hello! I'm ${personaName}. Ask me anything about the documents I've been trained on.`,
+        },
+      ],
     },
-  ])
-  const [input, setInput] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
-  const scrollAreaRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
+  ]);
+  const [input, setInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const scrollToBottom = () => {
-    if (scrollAreaRef.current) {
-      const scrollContainer = scrollAreaRef.current.querySelector("[data-radix-scroll-area-viewport]")
-      if (scrollContainer) {
-        scrollContainer.scrollTop = scrollContainer.scrollHeight
-      }
-    }
-  }
-
+  // Auto-scroll to the latest message
   useEffect(() => {
-    scrollToBottom()
-  }, [messages])
+    console.log("[ChatPanel] Current messages:", messages);
+    if (scrollAreaRef.current) {
+      const viewport = scrollAreaRef.current.querySelector(
+        "div[data-radix-scroll-area-viewport]"
+      );
+      if (viewport) viewport.scrollTop = viewport.scrollHeight;
+    }
+  }, [messages]);
 
   const sendMessage = async () => {
-    if (!input.trim() || isLoading) return
+    if (!input.trim() || isLoading) return;
 
-    const userMessage: Message = {
+    const newUserMessage: Message = {
       id: Date.now().toString(),
-      type: "user",
+      role: "user",
       content: input.trim(),
-      timestamp: new Date(),
-    }
+      parts: [{ type: "text", text: input.trim() }],
+    };
 
-    setMessages((prev) => [...prev, userMessage])
-    setInput("")
-    setIsLoading(true)
+    // Add the user's message and limit to the last 5 messages
+    const updatedMessages = [...messages, newUserMessage]
+      .slice(-5)
+      .map((msg) => ({
+        ...msg,
+        parts:
+          msg.parts && Array.isArray(msg.parts)
+            ? msg.parts
+            : [{ type: "text", text: msg.content }],
+      }));
+    console.log(
+      "[ChatPanel] Updated messages with user input:",
+      updatedMessages
+    );
+    setMessages(updatedMessages);
+    setInput("");
+    setIsLoading(true);
+    inputRef.current?.focus();
 
     try {
-      const response = await ky
-        .post("/api/ai/chat", {
-          json: {
-            tokenId: Number.parseInt(tokenId),
-            question: userMessage.content,
-          },
-          timeout: 30000, // 30 second timeout
-        })
-        .json<{ success: boolean; data?: { answer: string; sources: any[] }; error?: string }>()
+      const response = await fetch("/api/ai/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: updatedMessages,
+          tokenId: tokenId,
+        }),
+      });
 
-      if (response.success && response.data) {
-        const assistantMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          type: "assistant",
-          content: response.data.answer,
-          timestamp: new Date(),
-          sources: response.data.sources,
-        }
-
-        setMessages((prev) => [...prev, assistantMessage])
-      } else {
-        throw new Error(response.error || "Failed to get response")
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "An API error occurred.");
       }
-    } catch (error) {
-      console.error("Chat error:", error)
-      toast.error("Failed to send message. Please try again.")
 
-      const errorMessage: Message = {
+      const data = await response.json();
+      console.log("[ChatPanel] API response:", data);
+      if (!data.answer) {
+        throw new Error("No answer in response");
+      }
+
+      const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
-        type: "assistant",
-        content: "I'm sorry, I'm having trouble responding right now. Please try again later.",
-        timestamp: new Date(),
-      }
-
-      setMessages((prev) => [...prev, errorMessage])
+        role: "assistant",
+        content: data.answer,
+        parts: [{ type: "text", text: data.answer }],
+      };
+      console.log("[ChatPanel] Assistant message:", assistantMessage);
+      setMessages((prev) => [...prev, assistantMessage].slice(-5));
+    } catch (error) {
+      console.error("[ChatPanel] Chat error:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Failed to send message."
+      );
     } finally {
-      setIsLoading(false)
-      inputRef.current?.focus()
+      setIsLoading(false);
     }
-  }
+  };
+
+  const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    sendMessage();
+  };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault()
-      sendMessage()
+      e.preventDefault();
+      sendMessage();
     }
-  }
+  };
 
   return (
-    <Card className="glass h-[600px] flex flex-col">
+    <Card className="glass h-[700px] flex flex-col">
       <div className="p-4 border-b border-border/50">
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 bg-gradient-to-br from-neon-cyan to-neon-magenta rounded-full flex items-center justify-center">
@@ -125,7 +129,9 @@ export function ChatPanel({ tokenId, personaName }: ChatPanelProps) {
           </div>
           <div>
             <h3 className="font-semibold text-neon-cyan">{personaName}</h3>
-            <p className="text-xs text-muted-foreground">AI Persona • Token #{tokenId}</p>
+            <p className="text-xs text-muted-foreground">
+              AI Persona • Token #{tokenId}
+            </p>
           </div>
         </div>
       </div>
@@ -140,77 +146,41 @@ export function ChatPanel({ tokenId, personaName }: ChatPanelProps) {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.3 }}
-                className={`flex ${message.type === "user" ? "justify-end" : "justify-start"}`}
+                className={`flex ${
+                  message.role === "user" ? "justify-end" : "justify-start"
+                }`}
               >
                 <div
-                  className={`flex space-x-3 max-w-[80%] ${message.type === "user" ? "flex-row-reverse space-x-reverse" : ""}`}
+                  className={`max-w-[80%] rounded-lg px-4 py-2 ${
+                    message.role === "user"
+                      ? "bg-gradient-to-r from-neon-cyan to-neon-magenta text-background"
+                      : "bg-card border border-border text-foreground"
+                  }`}
                 >
-                  <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                      message.type === "user"
-                        ? "bg-gradient-to-br from-neon-magenta to-neon-purple"
-                        : "bg-gradient-to-br from-neon-cyan to-neon-magenta"
-                    }`}
-                  >
-                    {message.type === "user" ? (
-                      <User className="h-4 w-4 text-background" />
-                    ) : (
-                      <Bot className="h-4 w-4 text-background" />
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <div
-                      className={`p-3 rounded-lg ${
-                        message.type === "user"
-                          ? "bg-gradient-to-r from-neon-magenta/20 to-neon-purple/20 border border-neon-magenta/30"
-                          : "bg-card/50 border border-border/50"
-                      }`}
-                    >
-                      <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
-                    </div>
-
-                    {message.sources && message.sources.length > 0 && (
-                      <div className="space-y-2">
-                        <p className="text-xs text-muted-foreground">Sources:</p>
-                        <div className="flex flex-wrap gap-1">
-                          {message.sources.map((source, index) => (
-                            <Badge key={index} variant="secondary" className="text-xs">
-                              {source.metadata.name || `Source ${index + 1}`}
-                            </Badge>
-                          ))}
-                        </div>
+                  {(Array.isArray(message.parts)
+                    ? message.parts
+                    : [{ type: "text", text: message.content }]
+                  )
+                    .filter(
+                      (part) =>
+                        part.type === "text" && typeof part.text === "string"
+                    )
+                    .map((part, index) => (
+                      <div key={index} className="whitespace-pre-wrap">
+                        {part.text}
                       </div>
-                    )}
-
-                    <p className="text-xs text-muted-foreground">
-                      {message.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                    </p>
-                  </div>
+                    ))}
                 </div>
               </motion.div>
             ))}
           </AnimatePresence>
-
-          {isLoading && (
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex justify-start">
-              <div className="flex space-x-3 max-w-[80%]">
-                <div className="w-8 h-8 bg-gradient-to-br from-neon-cyan to-neon-magenta rounded-full flex items-center justify-center">
-                  <Bot className="h-4 w-4 text-background" />
-                </div>
-                <div className="bg-card/50 border border-border/50 p-3 rounded-lg">
-                  <div className="flex items-center space-x-2">
-                    <Loader2 className="h-4 w-4 animate-spin text-neon-cyan" />
-                    <span className="text-sm text-muted-foreground">Thinking...</span>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          )}
         </div>
       </ScrollArea>
 
-      <div className="p-4 border-t border-border/50">
+      <form
+        onSubmit={handleFormSubmit}
+        className="p-4 border-t border-border/50"
+      >
         <div className="flex space-x-2">
           <Input
             ref={inputRef}
@@ -218,18 +188,27 @@ export function ChatPanel({ tokenId, personaName }: ChatPanelProps) {
             onChange={(e) => setInput(e.target.value)}
             onKeyPress={handleKeyPress}
             placeholder={`Ask ${personaName} anything...`}
-            disabled={isLoading}
+            disabled={isLoading} // Changed from status !== "ready"
             className="flex-1"
             maxLength={1000}
           />
-          <Button onClick={sendMessage} disabled={!input.trim() || isLoading} size="sm" className="neon-glow-cyan px-3">
-            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+          <Button
+            type="submit"
+            disabled={!input.trim() || isLoading} // Changed from status !== "ready"
+            size="sm"
+            className="neon-glow-cyan px-3"
+          >
+            {isLoading ? ( // Changed from status === "streaming"
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
           </Button>
         </div>
         <p className="text-xs text-muted-foreground mt-2">
           Press Enter to send • Responses are based on uploaded persona data
         </p>
-      </div>
+      </form>
     </Card>
-  )
+  );
 }
