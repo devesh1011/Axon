@@ -9,15 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Brain,
-  ExternalLink,
-  Link,
-  User,
-  ChevronDown,
-  ChevronUp,
-  Plus,
-} from "lucide-react";
+import { Brain, ExternalLink, Link, Plus } from "lucide-react";
 import { motion } from "framer-motion";
 import ky from "ky";
 
@@ -25,6 +17,7 @@ interface TokenData {
   tokenId: number;
   tokenURI: string;
   owner: string;
+  pinata_cid?: string;
   metadata: {
     name: string;
     description: string;
@@ -49,6 +42,42 @@ interface LinkedAsset {
   linked_at: string;
 }
 
+// Utility function to fetch metadata from IPFS
+async function fetchMetadataFromIPFS(cid: string) {
+  if (!cid) {
+    console.log("No CID provided to fetchMetadataFromIPFS");
+    return null;
+  }
+
+  console.log("fetchMetadataFromIPFS called with CID:", cid);
+
+  try {
+    const gateway =
+      process.env.NEXT_PUBLIC_IPFS_GATEWAY || "https://gateway.pinata.cloud";
+    const url = `${gateway}/ipfs/${cid}`;
+
+    console.log("Fetching metadata from URL:", url);
+    console.log("Gateway used:", gateway);
+
+    const response = await fetch(url);
+    console.log("Response status:", response.status);
+    console.log("Response ok:", response.ok);
+
+    if (!response.ok) {
+      throw new Error(
+        `Failed to fetch metadata: ${response.status} ${response.statusText}`
+      );
+    }
+
+    const metadata = await response.json();
+    console.log("Successfully fetched metadata:", metadata);
+    return metadata;
+  } catch (error) {
+    console.error("Error fetching metadata from IPFS:", error);
+    return null;
+  }
+}
+
 export default function PersonaPage() {
   const params = useParams();
   const tokenId = params.tokenId as string;
@@ -56,7 +85,10 @@ export default function PersonaPage() {
   const [linkedAssets, setLinkedAssets] = useState<LinkedAsset[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>("");
-  const [showPersonaInfo, setShowPersonaInfo] = useState(false);
+  const [fullMetadata, setFullMetadata] = useState<Record<
+    string,
+    unknown
+  > | null>(null);
 
   useEffect(() => {
     const fetchTokenData = async () => {
@@ -78,8 +110,66 @@ export default function PersonaPage() {
 
         if (tokenResponse.success && tokenResponse.data) {
           console.log("Token data received:", tokenResponse.data);
-          console.log("Metadata structure:", tokenResponse.data.metadata);
           setTokenData(tokenResponse.data);
+
+          // Try to get pinata_cid from the database since contract might not have it
+          let pinataCid = tokenResponse.data.pinata_cid;
+
+          if (!pinataCid) {
+            console.log("No pinata_cid from contract, trying database...");
+            try {
+              const dbResponse = await ky.get(`/api/nft/all`).json<{
+                success: boolean;
+                data?: Array<{ tokenId: number; pinataCid?: string }>;
+                error?: string;
+              }>();
+
+              if (dbResponse.success && dbResponse.data) {
+                const nftData = dbResponse.data.find(
+                  (nft) => nft.tokenId === Number(tokenId)
+                );
+                if (nftData && nftData.pinataCid) {
+                  pinataCid = nftData.pinataCid;
+                  console.log("Found pinata_cid from database:", pinataCid);
+                }
+              }
+            } catch (dbError) {
+              console.error("Error fetching from database:", dbError);
+            }
+          }
+
+          // Fetch full metadata from IPFS using pinata_cid
+          if (pinataCid) {
+            console.log("Fetching metadata from IPFS:", pinataCid);
+            const ipfsMetadata = await fetchMetadataFromIPFS(pinataCid);
+            if (ipfsMetadata) {
+              console.log("IPFS metadata fetched:", ipfsMetadata);
+              setFullMetadata(ipfsMetadata);
+              // Update tokenData with full metadata
+              setTokenData((prev) =>
+                prev
+                  ? {
+                      ...prev,
+                      pinata_cid: pinataCid,
+                      metadata: {
+                        ...prev.metadata,
+                        ...ipfsMetadata,
+                        files:
+                          ipfsMetadata.uploadedFiles ||
+                          ipfsMetadata.files ||
+                          prev.metadata.files,
+                        attributes:
+                          ipfsMetadata.attributes || prev.metadata.attributes,
+                      },
+                    }
+                  : null
+              );
+            } else {
+              console.log("Failed to fetch IPFS metadata");
+            }
+          } else {
+            console.log("No pinata_cid available from contract or database");
+          }
         } else {
           setError(tokenResponse.error || "Token not found");
         }
@@ -100,13 +190,6 @@ export default function PersonaPage() {
 
   const formatAddress = (address: string) => {
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
-  };
-
-  const getExplorerUrl = (address: string) => {
-    const explorerBase =
-      process.env.NEXT_PUBLIC_ZETA_EXPLORER ||
-      "https://athens.explorer.zetachain.com";
-    return `${explorerBase}/address/${address}`;
   };
 
   const getChainExplorerUrl = (
@@ -232,80 +315,9 @@ export default function PersonaPage() {
             </div>
           </div>
 
-          <div className="grid lg:grid-cols-1 gap-8">
-            {/* Main Content - Chat Interface */}
+          <div className="grid lg:grid-cols-2 gap-8">
+            {/* Main Content - Tabs Interface */}
             <div className="space-y-6">
-              {/* Collapsible Persona Info */}
-              <Card className="glass p-4 md:p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center space-x-3 md:space-x-4">
-                    <div className="w-12 h-12 md:w-16 md:h-16 bg-gradient-to-br from-neon-cyan to-neon-magenta rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
-                      {tokenData.metadata.image ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={toIpfsUrl(tokenData.metadata.image)}
-                          alt={tokenData.metadata.name}
-                          className="object-cover w-full h-full"
-                        />
-                      ) : (
-                        <Brain className="h-6 w-6 md:h-8 md:w-8 text-background" />
-                      )}
-                    </div>
-                    <div>
-                      <h2 className="text-lg md:text-2xl font-bold">
-                        {tokenData.metadata.name}
-                      </h2>
-                      <p className="text-sm md:text-base text-muted-foreground">
-                        {tokenData.metadata.description}
-                      </p>
-                    </div>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowPersonaInfo(!showPersonaInfo)}
-                    className="text-neon-cyan hover:text-neon-cyan/80"
-                  >
-                    {showPersonaInfo ? (
-                      <ChevronUp className="h-4 w-4 md:h-5 md:w-5" />
-                    ) : (
-                      <ChevronDown className="h-4 w-4 md:h-5 md:w-5" />
-                    )}
-                  </Button>
-                </div>
-
-                {showPersonaInfo && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className="space-y-6"
-                  >
-                    <div className="flex items-center space-x-4">
-                      <div className="flex items-center space-x-2">
-                        <User className="h-4 w-4 text-neon-cyan" />
-                        <span className="text-sm">Owner:</span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() =>
-                            window.open(
-                              getExplorerUrl(tokenData.owner),
-                              "_blank"
-                            )
-                          }
-                          className="h-auto p-0 text-neon-cyan hover:text-neon-cyan/80"
-                        >
-                          {formatAddress(tokenData.owner)}
-                          <ExternalLink className="ml-1 h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-              </Card>
-
               {/* Tabs for different sections */}
               <Tabs defaultValue="attributes" className="w-full">
                 <TabsList className="grid w-full grid-cols-4">
@@ -317,22 +329,35 @@ export default function PersonaPage() {
 
                 <TabsContent value="attributes" className="space-y-4">
                   {(() => {
-                    const attributes = tokenData.metadata.attributes || [];
+                    // Use IPFS metadata attributes if available, fallback to basic metadata
+                    const ipfsAttributes = fullMetadata?.attributes;
+                    const basicAttributes = tokenData.metadata.attributes;
+                    const attributes = Array.isArray(ipfsAttributes)
+                      ? ipfsAttributes
+                      : Array.isArray(basicAttributes)
+                      ? basicAttributes
+                      : [];
                     console.log("Attributes check:", attributes);
+                    console.log("Full metadata:", fullMetadata);
                     return attributes.length > 0 ? (
                       <Card className="glass p-6">
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                          {attributes.map((attr, index) => (
-                            <div
-                              key={index}
-                              className="p-3 bg-card/50 rounded-lg border text-center"
-                            >
-                              <p className="text-xs text-muted-foreground uppercase tracking-wide">
-                                {attr.trait_type}
-                              </p>
-                              <p className="font-medium mt-1">{attr.value}</p>
-                            </div>
-                          ))}
+                          {attributes.map(
+                            (
+                              attr: { trait_type: string; value: string },
+                              index: number
+                            ) => (
+                              <div
+                                key={index}
+                                className="p-3 bg-card/50 rounded-lg border text-center"
+                              >
+                                <p className="text-xs text-muted-foreground uppercase tracking-wide">
+                                  {attr.trait_type}
+                                </p>
+                                <p className="font-medium mt-1">{attr.value}</p>
+                              </div>
+                            )
+                          )}
                         </div>
                       </Card>
                     ) : (
@@ -340,24 +365,16 @@ export default function PersonaPage() {
                         <p className="text-muted-foreground">
                           No attributes defined for this persona
                         </p>
-                        <details className="mt-4 text-left">
-                          <summary className="cursor-pointer text-sm text-neon-cyan">
-                            Debug: Show metadata structure
-                          </summary>
-                          <pre className="mt-2 text-xs bg-card/50 p-2 rounded overflow-auto">
-                            {JSON.stringify(tokenData.metadata, null, 2)}
-                          </pre>
-                          <div className="mt-2 text-xs">
-                            <p>
-                              <strong>Attributes found:</strong>{" "}
-                              {attributes.length}
-                            </p>
-                            <p>
-                              <strong>Has attributes property:</strong>{" "}
-                              {!!tokenData.metadata.attributes}
-                            </p>
-                          </div>
-                        </details>
+                        {fullMetadata && (
+                          <details className="mt-4 text-left">
+                            <summary className="cursor-pointer text-sm text-neon-cyan">
+                              Debug: Show full IPFS metadata
+                            </summary>
+                            <pre className="mt-2 text-xs bg-card/50 p-2 rounded overflow-auto">
+                              {JSON.stringify(fullMetadata, null, 2)}
+                            </pre>
+                          </details>
+                        )}
                       </Card>
                     );
                   })()}
@@ -365,45 +382,74 @@ export default function PersonaPage() {
 
                 <TabsContent value="files" className="space-y-4">
                   {(() => {
-                    const files =
+                    // Use IPFS metadata files if available, fallback to basic metadata
+                    const ipfsFiles = fullMetadata?.uploadedFiles;
+                    const basicFiles =
                       tokenData.metadata.files ||
-                      tokenData.metadata.uploadedFiles ||
-                      [];
+                      tokenData.metadata.uploadedFiles;
+                    const files = Array.isArray(ipfsFiles)
+                      ? ipfsFiles
+                      : Array.isArray(basicFiles)
+                      ? basicFiles
+                      : [];
                     console.log("Files check:", files);
+                    console.log("IPFS files:", ipfsFiles);
+                    console.log("Basic files:", basicFiles);
                     return files.length > 0 ? (
                       <Card className="glass p-6">
                         <div className="space-y-3">
-                          {files.map((file, index) => (
-                            <div
-                              key={index}
-                              className="flex items-center justify-between p-3 bg-card/50 rounded-lg border"
-                            >
-                              <div className="flex items-center space-x-3">
-                                <div className="w-8 h-8 bg-gradient-to-br from-neon-purple to-neon-cyan rounded flex items-center justify-center">
-                                  <span className="text-xs font-bold text-background">
-                                    {file.name
-                                      .split(".")
-                                      .pop()
-                                      ?.toUpperCase() || "FILE"}
-                                  </span>
-                                </div>
-                                <span className="font-medium">{file.name}</span>
-                              </div>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() =>
-                                  window.open(
-                                    `https://ipfs.io/ipfs/${file.cid}`,
-                                    "_blank"
-                                  )
-                                }
-                                className="h-8 w-8 p-0"
+                          {files.map(
+                            (
+                              file: {
+                                cid: string;
+                                name: string;
+                                type?: string;
+                              },
+                              index: number
+                            ) => (
+                              <div
+                                key={index}
+                                className="flex items-center justify-between p-3 bg-card/50 rounded-lg border"
                               >
-                                <ExternalLink className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          ))}
+                                <div className="flex items-center space-x-3">
+                                  <div className="w-8 h-8 bg-gradient-to-br from-neon-purple to-neon-cyan rounded flex items-center justify-center">
+                                    <span className="text-xs font-bold text-background">
+                                      {file.name
+                                        .split(".")
+                                        .pop()
+                                        ?.toUpperCase() || "FILE"}
+                                    </span>
+                                  </div>
+                                  <div>
+                                    <span className="font-medium">
+                                      {file.name}
+                                    </span>
+                                    {file.type && (
+                                      <p className="text-xs text-muted-foreground">
+                                        {file.type}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    const gateway =
+                                      process.env.NEXT_PUBLIC_IPFS_GATEWAY ||
+                                      "https://gateway.pinata.cloud";
+                                    window.open(
+                                      `${gateway}/ipfs/${file.cid}`,
+                                      "_blank"
+                                    );
+                                  }}
+                                  className="h-8 w-8 p-0"
+                                >
+                                  <ExternalLink className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            )
+                          )}
                         </div>
                       </Card>
                     ) : (
@@ -411,27 +457,16 @@ export default function PersonaPage() {
                         <p className="text-muted-foreground">
                           No files uploaded for this persona
                         </p>
-                        <details className="mt-4 text-left">
-                          <summary className="cursor-pointer text-sm text-neon-cyan">
-                            Debug: Show metadata structure
-                          </summary>
-                          <pre className="mt-2 text-xs bg-card/50 p-2 rounded overflow-auto">
-                            {JSON.stringify(tokenData.metadata, null, 2)}
-                          </pre>
-                          <div className="mt-2 text-xs">
-                            <p>
-                              <strong>Files found:</strong> {files.length}
-                            </p>
-                            <p>
-                              <strong>Has files property:</strong>{" "}
-                              {!!tokenData.metadata.files}
-                            </p>
-                            <p>
-                              <strong>Has uploadedFiles property:</strong>{" "}
-                              {!!tokenData.metadata.uploadedFiles}
-                            </p>
-                          </div>
-                        </details>
+                        {fullMetadata && (
+                          <details className="mt-4 text-left">
+                            <summary className="cursor-pointer text-sm text-neon-cyan">
+                              Debug: Show full IPFS metadata
+                            </summary>
+                            <pre className="mt-2 text-xs bg-card/50 p-2 rounded overflow-auto">
+                              {JSON.stringify(fullMetadata, null, 2)}
+                            </pre>
+                          </details>
+                        )}
                       </Card>
                     );
                   })()}
@@ -441,55 +476,39 @@ export default function PersonaPage() {
                   {linkedAssets.length > 0 ? (
                     <Card className="glass p-6">
                       <div className="space-y-4">
-                        {linkedAssets.map((asset, index) => (
+                        {linkedAssets.map((asset) => (
                           <div
                             key={asset.id}
                             className="flex items-center justify-between p-4 bg-card/50 rounded-lg border"
                           >
-                            <div className="flex items-center space-x-4">
-                              <div className="w-12 h-12 bg-gradient-to-br from-neon-magenta to-neon-purple rounded-full flex items-center justify-center">
-                                <Link className="h-6 w-6 text-background" />
+                            <div className="space-y-2">
+                              <div className="flex items-center space-x-2">
+                                <Badge variant="outline" className="text-xs">
+                                  {asset.chain_name}
+                                </Badge>
+                                <span className="text-sm font-medium">
+                                  Asset #{asset.asset_id}
+                                </span>
                               </div>
-                              <div>
-                                <div className="flex items-center space-x-2 mb-1">
-                                  <Badge
-                                    variant="secondary"
-                                    className="capitalize"
-                                  >
-                                    {asset.chain_name}
-                                  </Badge>
-                                  <span className="font-medium">
-                                    {asset.asset_address.slice(0, 6)}...
-                                    {asset.asset_address.slice(-4)}
-                                  </span>
-                                </div>
-                                <p className="text-sm text-muted-foreground">
-                                  Token ID: {asset.asset_id} • Linked{" "}
-                                  {new Date(
-                                    asset.linked_at
-                                  ).toLocaleDateString()}
-                                </p>
-                              </div>
+                              <p className="text-xs text-muted-foreground">
+                                {formatAddress(asset.asset_address)}
+                              </p>
                             </div>
-                            <div className="flex items-center space-x-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  const explorerUrl = getChainExplorerUrl(
-                                    asset.chain_name,
-                                    asset.asset_address,
-                                    asset.asset_id
-                                  );
-                                  if (explorerUrl) {
-                                    window.open(explorerUrl, "_blank");
-                                  }
-                                }}
-                                className="h-8 w-8 p-0"
-                              >
-                                <ExternalLink className="h-4 w-4" />
-                              </Button>
-                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                const url = getChainExplorerUrl(
+                                  asset.chain_name,
+                                  asset.asset_address,
+                                  asset.asset_id
+                                );
+                                if (url) window.open(url, "_blank");
+                              }}
+                              className="h-8 w-8 p-0"
+                            >
+                              <ExternalLink className="h-4 w-4" />
+                            </Button>
                           </div>
                         ))}
                       </div>
@@ -501,22 +520,15 @@ export default function PersonaPage() {
                           <Link className="h-8 w-8 text-background" />
                         </div>
                         <div>
-                          <h3 className="text-lg font-bold text-neon-magenta mb-2">
+                          <h3 className="text-lg font-semibold mb-2">
                             No Linked Assets
                           </h3>
                           <p className="text-muted-foreground mb-4">
-                            This persona doesn&apos;t have any cross-chain
-                            assets linked yet
+                            Connect external NFTs and assets to expand this
+                            persona&apos;s identity
                           </p>
-                          <Button
-                            asChild
-                            variant="outline"
-                            className="glass bg-transparent"
-                          >
-                            <a href="/link">
-                              <Link className="mr-2 h-4 w-4" />
-                              Link Assets
-                            </a>
+                          <Button asChild>
+                            <a href={`/link?tokenId=${tokenId}`}>Link Asset</a>
                           </Button>
                         </div>
                       </div>
@@ -565,32 +577,55 @@ export default function PersonaPage() {
                           <ExternalLink className="ml-1 h-3 w-3" />
                         </Button>
                       </div>
+                      {tokenData.pinata_cid && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground">
+                            IPFS CID:
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              window.open(
+                                `https://gateway.pinata.cloud/ipfs/${tokenData.pinata_cid}`,
+                                "_blank"
+                              )
+                            }
+                            className="h-auto p-0 text-neon-cyan hover:text-neon-cyan/80"
+                          >
+                            {tokenData.pinata_cid.slice(0, 10)}...
+                            <ExternalLink className="ml-1 h-3 w-3" />
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </Card>
                 </TabsContent>
               </Tabs>
             </div>
 
-            {/* Chat Interface - Full Width */}
-            <div className="flex flex-col h-[calc(100vh-300px)] min-h-[600px] relative">
-              <ChatPanel
-                tokenId={tokenId}
-                personaName={tokenData.metadata.name}
-              />
-
-              {/* Floating Action Button for Linking Assets */}
-              <div className="fixed bottom-6 right-6 z-50">
-                <Button
-                  asChild
-                  size="lg"
-                  className="rounded-full w-14 h-14 bg-gradient-to-r from-neon-magenta to-neon-purple hover:opacity-90 shadow-lg"
-                >
-                  <a href={`/link?tokenId=${tokenId}`}>
-                    <Plus className="h-6 w-6" />
-                  </a>
-                </Button>
+            {/* Chat Interface - Fixed Height Window */}
+            <div className="sticky top-24 h-[800px] flex flex-col">
+              <div className="flex-1 overflow-hidden">
+                <ChatPanel
+                  tokenId={tokenId}
+                  personaName={tokenData.metadata.name}
+                />
               </div>
             </div>
+          </div>
+
+          {/* Floating Action Button for Linking Assets */}
+          <div className="fixed bottom-6 right-6 z-50">
+            <Button
+              asChild
+              size="lg"
+              className="rounded-full w-14 h-14 bg-gradient-to-r from-neon-magenta to-neon-purple hover:opacity-90 shadow-lg"
+            >
+              <a href={`/link?tokenId=${tokenId}`}>
+                <Plus className="h-6 w-6" />
+              </a>
+            </Button>
           </div>
         </motion.div>
       </div>

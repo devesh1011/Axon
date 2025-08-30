@@ -28,20 +28,23 @@ export function ChatPanel({ tokenId, personaName }: ChatPanelProps) {
   const [isLoading, setIsLoading] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to the latest message within the ScrollArea
-  useEffect(() => {
-    if (scrollAreaRef.current) {
-      const scrollContainer = scrollAreaRef.current.querySelector(
-        "[data-radix-scroll-area-viewport]"
-      ) as HTMLDivElement;
-      if (scrollContainer) {
-        scrollContainer.scrollTo({
-          top: scrollContainer.scrollHeight,
-          behavior: "smooth",
-        });
-      }
+  // Auto-scroll to latest message within the chat container only
+  const scrollToBottom = () => {
+    if (messagesEndRef.current && scrollAreaRef.current) {
+      // Use the scroll area's viewport for scrolling
+      messagesEndRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "end",
+        // Ensure scrolling is contained within the chat
+      });
     }
+  };
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    scrollToBottom();
   }, [messages]);
 
   const sendMessage = async () => {
@@ -54,9 +57,9 @@ export function ChatPanel({ tokenId, personaName }: ChatPanelProps) {
       parts: [{ type: "text", text: input.trim() }],
     };
 
-    // Add the user's message and limit to the last 5 messages
+    // Add the user's message and limit to the last 10 messages for better UX
     const updatedMessages = [...messages, newUserMessage]
-      .slice(-5)
+      .slice(-10)
       .map((msg) => ({
         ...msg,
         parts:
@@ -95,7 +98,7 @@ export function ChatPanel({ tokenId, personaName }: ChatPanelProps) {
         content: data.answer,
         parts: [{ type: "text", text: data.answer }],
       };
-      setMessages((prev) => [...prev, assistantMessage].slice(-5));
+      setMessages((prev) => [...prev, assistantMessage].slice(-10));
     } catch (error) {
       console.error("[ChatPanel] Chat error:", error);
       toast.error(
@@ -119,8 +122,9 @@ export function ChatPanel({ tokenId, personaName }: ChatPanelProps) {
   };
 
   return (
-    <Card className="glass h-full flex flex-col">
-      <div className="p-4 border-b border-border/50">
+    <Card className="glass h-full flex flex-col overflow-hidden max-h-[800px]">
+      {/* Header - Fixed */}
+      <div className="p-4 border-b border-border/50 flex-shrink-0 bg-background/95 backdrop-blur-sm">
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 bg-gradient-to-br from-neon-cyan to-neon-magenta rounded-full flex items-center justify-center">
             <Bot className="h-5 w-5 text-background" />
@@ -134,79 +138,84 @@ export function ChatPanel({ tokenId, personaName }: ChatPanelProps) {
         </div>
       </div>
 
-      <ScrollArea ref={scrollAreaRef} className="flex-1 p-4">
-        <div className="space-y-4">
-          <AnimatePresence>
-            {messages.map((message) => (
-              <motion.div
-                key={message.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-                className={`flex ${
-                  message.role === "user" ? "justify-end" : "justify-start"
-                }`}
-              >
-                <div
-                  className={`max-w-[80%] rounded-lg px-4 py-2 ${
-                    message.role === "user"
-                      ? "bg-gradient-to-r from-neon-cyan to-neon-magenta text-background"
-                      : "bg-card border border-border text-foreground"
+      {/* Messages Area - Scrollable with constrained height */}
+      <div className="flex-1 overflow-hidden min-h-0">
+        <ScrollArea ref={scrollAreaRef} className="h-full">
+          <div className="p-4 space-y-4">
+            <AnimatePresence>
+              {messages.map((message) => (
+                <motion.div
+                  key={message.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.3 }}
+                  className={`flex ${
+                    message.role === "user" ? "justify-end" : "justify-start"
                   }`}
                 >
-                  {(Array.isArray(message.parts)
-                    ? message.parts
-                    : [{ type: "text", text: message.content }]
-                  )
-                    .filter(
-                      (part) =>
-                        part.type === "text" && typeof part.text === "string"
+                  <div
+                    className={`max-w-[80%] rounded-lg px-4 py-2 ${
+                      message.role === "user"
+                        ? "bg-gradient-to-r from-neon-cyan to-neon-magenta text-background"
+                        : "bg-card border border-border text-foreground"
+                    }`}
+                  >
+                    {(Array.isArray(message.parts)
+                      ? message.parts
+                      : [{ type: "text", text: message.content }]
                     )
-                    .map((part, index) => (
-                      <div key={index} className="whitespace-pre-wrap">
-                        {part.text}
-                      </div>
-                    ))}
-                </div>
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </div>
-      </ScrollArea>
+                      .filter(
+                        (part) =>
+                          part.type === "text" && typeof part.text === "string"
+                      )
+                      .map((part, index) => (
+                        <div key={index} className="whitespace-pre-wrap">
+                          {part.text}
+                        </div>
+                      ))}
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+            {/* Invisible element to scroll to */}
+            <div ref={messagesEndRef} />
+          </div>
+        </ScrollArea>
+      </div>
 
-      <form
-        onSubmit={handleFormSubmit}
-        className="p-4 border-t border-border/50 bg-background/95 backdrop-blur-sm"
-      >
-        <div className="flex space-x-2">
-          <Input
-            ref={inputRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder={`Ask ${personaName} anything...`}
-            disabled={isLoading}
-            className="flex-1"
-            maxLength={1000}
-          />
-          <Button
-            type="submit"
-            disabled={!input.trim() || isLoading}
-            size="sm"
-            className="neon-glow-cyan px-3"
-          >
-            {isLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
-          </Button>
-        </div>
-        <p className="text-xs text-muted-foreground mt-2">
-          Press Enter to send • Responses are based on uploaded persona data
-        </p>
-      </form>
+      {/* Input Area - Fixed */}
+      <div className="p-4 border-t border-border/50 flex-shrink-0 bg-background/95 backdrop-blur-sm">
+        <form onSubmit={handleFormSubmit}>
+          <div className="flex space-x-2">
+            <Input
+              ref={inputRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder={`Ask ${personaName} anything...`}
+              disabled={isLoading}
+              className="flex-1"
+              maxLength={1000}
+            />
+            <Button
+              type="submit"
+              disabled={!input.trim() || isLoading}
+              size="sm"
+              className="neon-glow-cyan px-3"
+            >
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground mt-2">
+            Press Enter to send • Responses are based on uploaded persona data
+          </p>
+        </form>
+      </div>
     </Card>
   );
 }
