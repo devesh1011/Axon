@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Link, Zap } from "lucide-react";
 import { motion } from "framer-motion";
+import DemoCrossChainAssets from "@/components/DemoCrossChainAssets";
 
 export default function LinkPage() {
   const searchParams = useSearchParams();
@@ -52,6 +53,13 @@ export default function LinkPage() {
                 </div>
               )}
             </div>
+
+            {/* Demo Component - Only shows in demo mode */}
+            {process.env.NEXT_PUBLIC_DEMO_MODE === "true" && (
+              <div className="mb-8">
+                <DemoCrossChainAssets />
+              </div>
+            )}
 
             {/* Info Card */}
             <Card className="glass p-6 mb-8">
@@ -155,8 +163,8 @@ export default function LinkPage() {
                 </p>
                 <p>
                   • <strong>Verification:</strong> We only verify ownership at
-                  the time of linking - transfers after linking won't update
-                  automatically
+                  the time of linking - transfers after linking won&apos;t
+                  update automatically
                 </p>
                 <p>
                   • <strong>Privacy:</strong> Only the contract address, token
