@@ -1,12 +1,12 @@
-# 🌟 Omni-Soul: Cross-Chain NFT Identity Platform
+# 🌟 Axon: Cross-Chain NFT Identity Platform
 
-![Omni-Soul Banner](https://via.placeholder.com/1200x400/3b82f6/ffffff?text=Omni-Soul%20-%20Your%20Digital%20Soul%20on%20Chain)
+![Axon Banner](https://via.placeholder.com/1200x400/3b82f6/ffffff?text=Axon%20-%20Your%20Digital%20Soul%20on%20Chain)
 
-Omni-Soul is a revolutionary NFT platform built on ZetaChain that creates digital representations of your identity with AI-powered personas and cross-chain asset linking capabilities.
+Axon is a revolutionary NFT platform built on ZetaChain that creates digital representations of your identity with AI-powered personas and cross-chain asset linking capabilities.
 
 ## ✨ Features
 
-- **🎨 Smart NFT Creation**: Mint unique Omni-Soul NFTs on ZetaChain
+- **🎨 Smart NFT Creation**: Mint unique Axon NFTs on ZetaChain
 - **🧠 AI-Powered Personas**: Chat with AI that embodies your personal history
 - **🔗 Cross-Chain Asset Linking**: Connect NFTs and assets from multiple blockchains
 - **📦 Decentralized Storage**: IPFS integration via Pinata for permanent data storage
@@ -116,17 +116,17 @@ The web app will be available at `http://localhost:3000`
 
 ## 📱 Usage
 
-### Creating an Omni-Soul NFT
+### Creating an Axon NFT
 
 1. **Connect Wallet**: Use the connect button to link your ZetaChain wallet
 2. **Fill Personal Information**: Add your bio, education, work experience, memories
 3. **Upload Media**: Add profile pictures or other media files
-4. **Mint NFT**: Deploy your Omni-Soul to the blockchain
+4. **Mint NFT**: Deploy your Axon to the blockchain
 5. **AI Persona**: Your AI persona is automatically generated and ready for chat
 
 ### Chatting with AI Persona
 
-1. **Navigate to Your Soul**: Go to your Omni-Soul's page
+1. **Navigate to Your Soul**: Go to your Axon's page
 2. **Start Conversation**: Use the chat interface to ask questions
 3. **Personal Responses**: The AI responds based on your personal history
 4. **Context Awareness**: The AI remembers previous conversations
@@ -142,11 +142,11 @@ The web app will be available at `http://localhost:3000`
 
 ### NFT Endpoints
 
-- `POST /api/omni-soul/create` - Create new Omni-Soul NFT
-- `GET /api/omni-soul/:tokenId` - Get NFT metadata and information
-- `POST /api/omni-soul/update-metadata` - Update NFT metadata
-- `POST /api/omni-soul/link-asset` - Link cross-chain asset
-- `GET /api/omni-soul/:tokenId/linked-assets` - Get linked assets
+- `POST /api/Axon/create` - Create new Axon NFT
+- `GET /api/Axon/:tokenId` - Get NFT metadata and information
+- `POST /api/Axon/update-metadata` - Update NFT metadata
+- `POST /api/Axon/link-asset` - Link cross-chain asset
+- `GET /api/Axon/:tokenId/linked-assets` - Get linked assets
 
 ### AI Endpoints
 
@@ -272,4 +272,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 Built with ❤️ for the ZetaChain Hackathon
 
-_Omni-Soul - Where your digital identity comes alive_
+_Axon - Where your digital identity comes alive_
