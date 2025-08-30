@@ -1,135 +1,262 @@
-# 🌟 Axon: Cross-Chain NFT Identity Platform
+# 🌟 Axon: The Future of Cross-Chain NFT Identity
 
-![Axon Banner](https://via.placeholder.com/1200x400/3b82f6/ffffff?text=Axon%20-%20Your%20Digital%20Soul%20on%20Chain)
+**Axon** is a decentralized platform that revolutionizes digital identity through cross-chain NFT verification, AI-powered persona generation, and seamless Web3 integration. Built on ZetaChain's omnichain infrastructure with production-grade smart contracts and real blockchain integrations.
 
-Axon is a revolutionary NFT platform built on ZetaChain that creates digital representations of your identity with AI-powered personas and cross-chain asset linking capabilities.
+## 🚀 What Makes Axon Special
 
-## ✨ Features
+### 🔗 True Cross-Chain NFT Verification
 
-- **🎨 Smart NFT Creation**: Mint unique Axon NFTs on ZetaChain
-- **🧠 AI-Powered Personas**: Chat with AI that embodies your personal history
-- **🔗 Cross-Chain Asset Linking**: Connect NFTs and assets from multiple blockchains
-- **📦 Decentralized Storage**: IPFS integration via Pinata for permanent data storage
-- **🌐 Modern Web3 Frontend**: Built with Next.js, TypeScript, and Tailwind CSS
-- **⚡ ZetaChain Integration**: Leverage omnichain functionality for seamless operations
+- **Production-Ready Integration**: Live connections to Ethereum, Polygon, BSC, Arbitrum, Optimism, and Solana mainnet/testnet
+- **Real Blockchain Calls**: Direct RPC verification using ethers.js and @solana/web3.js
+- **Universal Asset Linking**: Connect NFTs from any supported chain to your ZetaChain identity
+- **Cryptographic Ownership Proof**: Secure verification with on-chain validation
+- **Smart Contract Registry**: ZetaChain deployed contract at `0x52AfBb6160bd3694fE70f6836a8ed81ae599da8a`
 
-## 🏗️ Architecture
+### � Advanced AI Persona System
 
-### Smart Contracts (`/contracts`)
+- **Context-Aware Generation**: AI creates unique personalities using Google Gemini with RAG technology
+- **Vector Embeddings**: Sophisticated similarity search using Supabase vector store
+- **Interactive Conversations**: Natural, engaging chat experiences with persona-specific knowledge
+- **Dynamic Learning**: Personas evolve based on your expanding NFT collection
+- **LangChain Integration**: Professional-grade AI pipeline with memory and context management
 
-- **OmniSoul.sol**: ERC-721 NFT contract with cross-chain asset linking
-- Built with OpenZeppelin contracts for security and standards compliance
-- Deployed on ZetaChain for omnichain capabilities
+### 🎨 Production-Ready NFT Creation
 
-### Backend API (`/backend`)
+- **Complete Minting Pipeline**: End-to-end NFT creation with metadata generation
+- **IPFS Integration**: Decentralized storage via Pinata with custom gateway
+- **Metadata Enrichment**: Automatic attribute generation and validation
+- **ZetaChain Deployment**: Native omnichain NFT contracts with cross-chain capabilities
 
-- **Node.js + Express**: RESTful API server
-- **ZetaChain Integration**: Smart contract interactions via ethers.js
-- **IPFS Storage**: Pinata SDK for decentralized metadata storage
-- **AI Persona Engine**: LangChain.js + Google Generative AI integration
-- **Vector Storage**: In-memory vector stores for AI context retrieval
+### 🌐 Infrastructure
+
+- **Supabase Backend**: Production PostgreSQL with real-time capabilities
+- **Type-Safe APIs**: 20+ Next.js API routes with comprehensive validation
+- **RainbowKit Integration**: Professional wallet connection with multi-chain support
+- **Rate Limiting**: Production-ready API protection and security measures
+
+## 🏗️ Technical Architecture
 
 ### Frontend (`/frontend`)
 
-sbp_92da2ce3defa28533e08f7424a80264f5f5e651e
+- **Next.js 15.5.0**: Latest React framework with App Router and server components
+- **TypeScript**: Complete type safety with comprehensive interfaces
+- **Tailwind CSS 4.1.12**: Modern utility-first styling with cyberpunk theme
+- **RainbowKit 2.2.8**: Advanced Web3 wallet integration with 6+ chain support
+- **Framer Motion**: Smooth animations and micro-interactions
+- **Supabase Client**: Real-time database interactions and vector operations
 
-- **Next.js 14**: Modern React framework with App Router
-- **TypeScript**: Type-safe development
-- **Tailwind CSS**: Utility-first styling
-- **wagmi + ConnectKit**: Web3 wallet integration
-- **Framer Motion**: Smooth animations and interactions
+### Smart Contracts (`/contracts`)
+
+- **OmniSoul.sol**: Production ERC-721 contract deployed on ZetaChain
+- **OpenZeppelin 4.9.3**: Battle-tested security standards
+- **Hardhat**: Professional development environment with TypeScript
+- **ZetaChain Testnet**: Deployed at `0x52AfBb6160bd3694fE70f6836a8ed81ae599da8a`
+
+### Backend Infrastructure
+
+- **Supabase PostgreSQL**: Production database with vector extensions
+- **IPFS/Pinata**: Decentralized storage with custom gateway at `coffee-urgent-crab-303.mypinata.cloud`
+- **Google Gemini AI**: Advanced language model with function calling
+- **LangChain**: RAG implementation with vector similarity search
+- **Real RPC Endpoints**: Direct blockchain calls to mainnet/testnet networks
+
+### API Architecture (`/frontend/app/api`)
+
+- **NFT Creation**: `/api/nft/create` - Complete minting pipeline with Supabase integration
+- **AI Chat**: `/api/ai/chat` - Persona conversations with RAG and rate limiting
+- **Cross-Chain Verification**: `/api/omnisoul/verify-evm` & `/api/omnisoul/verify-solana`
+- **IPFS Operations**: `/api/ipfs/upload` & `/api/ipfs/get` - Metadata management
+- **AI Embeddings**: `/api/ai/embeddings` - Vector generation and storage
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 
-- Node.js 18+ and npm/yarn
-- Git
-- A ZetaChain testnet wallet with ZETA tokens
-- Pinata account for IPFS storage
-- Google AI API key for Gemini
+- **Node.js 18+** and npm/yarn
+- **Git** for version control
+- **ZetaChain testnet wallet** with ZETA tokens
+- **Supabase account** for database and vector operations
+- **Pinata account** for IPFS storage
+- **Google AI Studio API key** for Gemini integration
 
 ### 1. Clone and Setup
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/your-username/OmniSoul.git
 cd OmniSoul
 
-# Install dependencies for all components
-npm run install:all
+# Navigate to frontend (main application)
+cd frontend
+npm install
 ```
 
 ### 2. Environment Configuration
 
-Copy the environment template and fill in your credentials:
+Copy the environment template and configure your credentials:
 
 ```bash
-cp .env.example .env
+# In frontend directory
+cp .env.example .env.local
 ```
 
-Edit `.env` with your actual values:
+Configure your `.env.local` with these essential variables:
 
 ```env
-# ZetaChain Configuration
-PRIVATE_KEY=your_private_key_here
-RPC_URL=https://rpc.ankr.com/zetachain_evm_testnet
-CONTRACT_ADDRESS=  # Will be filled after deployment
+# Supabase Configuration
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 
-# Pinata IPFS Configuration
-PINATA_API_KEY=your_pinata_api_key_here
-PINATA_SECRET_KEY=your_pinata_secret_key_here
+# IPFS/Pinata Configuration
+PINATA_JWT=your_pinata_jwt_token
+NEXT_PUBLIC_PINATA_GATEWAY=coffee-urgent-crab-303.mypinata.cloud
 
-# Google Gemini AI Configuration
-GEMINI_API_KEY=your_gemini_api_key_here
+# AI Configuration
+GOOGLE_API_KEY=your_google_gemini_api_key
+
+# Web3 Configuration
+NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your_walletconnect_project_id
+NEXT_PUBLIC_OMNISOUL_ADDRESS=0x52AfBb6160bd3694fE70f6836a8ed81ae599da8a
+
+# Demo Mode (optional)
+NEXT_PUBLIC_DEMO_MODE=false
 ```
 
-### 3. Deploy Smart Contracts
+### 3. Database Setup
+
+Set up your Supabase database with the required tables:
+
+```sql
+-- Enable vector extension
+CREATE EXTENSION IF NOT EXISTS vector;
+
+-- Create tables
+CREATE TABLE nfts (
+  id SERIAL PRIMARY KEY,
+  token_id INTEGER UNIQUE NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  description TEXT,
+  image_url TEXT,
+  metadata JSONB,
+  owner_address VARCHAR(42) NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE persona_embeddings (
+  id SERIAL PRIMARY KEY,
+  persona_key VARCHAR(255) UNIQUE NOT NULL,
+  embedding vector(768),
+  metadata JSONB,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE wallet_profiles (
+  wallet_address VARCHAR(42) PRIMARY KEY,
+  profile_data JSONB,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE linked_assets (
+  id SERIAL PRIMARY KEY,
+  axon_token_id INTEGER NOT NULL,
+  chain VARCHAR(50) NOT NULL,
+  contract_address VARCHAR(42) NOT NULL,
+  token_id VARCHAR(255) NOT NULL,
+  wallet_address VARCHAR(42) NOT NULL,
+  transaction_hash VARCHAR(66),
+  metadata JSONB,
+  created_at TIMESTAMP DEFAULT NOW(),
+  FOREIGN KEY (axon_token_id) REFERENCES nfts(token_id)
+);
+```
+
+### 4. Smart Contract Deployment (Optional)
+
+If you want to deploy your own contract:
 
 ```bash
 cd contracts
 npm install
-npm run compile
+
+# Configure your private key in contracts/.env
+echo "PRIVATE_KEY=your_private_key_here" > .env
+
+# Deploy to ZetaChain testnet
 npm run deploy:testnet
 ```
 
-Copy the deployed contract address to your `.env` file.
-
-### 4. Start the Backend
+### 5. Start the Application
 
 ```bash
-cd ../backend
-npm install
+# In frontend directory
 npm run dev
 ```
 
-The API server will start on `http://localhost:3001`
+## 🎯 Core Features & Usage
 
-### 5. Start the Frontend
+### 🎨 NFT Creation & Minting
 
-```bash
-cd ../frontend
-npm install
-npm run dev
-```
+1. **Connect Wallet**: Use RainbowKit to connect your Web3 wallet
+2. **Create Your Axon**: Fill out personal information, upload media, add memories
+3. **AI Enhancement**: Our system automatically enriches your metadata with AI-generated attributes
+4. **IPFS Storage**: Metadata is permanently stored on IPFS via Pinata
+5. **Blockchain Minting**: Your NFT is minted on ZetaChain with omnichain capabilities
 
-The web app will be available at `http://localhost:3000`
+### 🤖 AI Persona Interaction
 
-## 📱 Usage
+1. **Automatic Generation**: AI personas are created from your NFT metadata using vector embeddings
+2. **Natural Conversations**: Chat with AI that knows your personal history and preferences
+3. **Context Awareness**: Personas remember conversation history and learn from interactions
+4. **RAG Technology**: Retrieval-Augmented Generation provides accurate, personalized responses
 
-### Creating an Axon NFT
+### 🔗 Cross-Chain Asset Linking
 
-1. **Connect Wallet**: Use the connect button to link your ZetaChain wallet
-2. **Fill Personal Information**: Add your bio, education, work experience, memories
-3. **Upload Media**: Add profile pictures or other media files
-4. **Mint NFT**: Deploy your Axon to the blockchain
-5. **AI Persona**: Your AI persona is automatically generated and ready for chat
+1. **Multi-Chain Support**: Connect NFTs from Ethereum, Polygon, BSC, Arbitrum, Optimism, and Solana
+2. **Ownership Verification**: Real blockchain RPC calls verify your NFT ownership
+3. **Asset Registry**: Linked assets are stored in your Axon's cross-chain portfolio
+4. **Universal Identity**: One ZetaChain identity representing assets across all supported chains
 
-### Chatting with AI Persona
+### 📊 Profile Management
 
-1. **Navigate to Your Soul**: Go to your Axon's page
-2. **Start Conversation**: Use the chat interface to ask questions
-3. **Personal Responses**: The AI responds based on your personal history
-4. **Context Awareness**: The AI remembers previous conversations
+1. **Wallet Profiles**: Comprehensive user profiles stored in Supabase
+2. **NFT Gallery**: View your complete NFT collection with IPFS metadata
+3. **Cross-Chain Portfolio**: See all linked assets from different blockchains
+4. **Activity Timeline**: Track your minting, linking, and interaction history
+
+## 🔧 Advanced Configuration
+
+### Supported Blockchain Networks
+
+**EVM Chains:**
+
+- Ethereum Mainnet/Sepolia
+- Polygon Mainnet/Mumbai
+- BSC Mainnet/Testnet
+- Arbitrum One/Sepolia
+- Optimism Mainnet/Sepolia
+
+**Non-EVM Chains:**
+
+- Solana Mainnet/Devnet
+
+### IPFS Configuration
+
+Using Pinata for production-grade IPFS storage:
+
+- Custom gateway: `coffee-urgent-crab-303.mypinata.cloud`
+- Automatic metadata pinning
+- Image optimization and resizing
+- Permanent storage with redundancy
+
+### AI Configuration
+
+Powered by Google Gemini with advanced features:
+
+- Function calling for dynamic responses
+- Vector similarity search
+- Conversation memory management
+- Rate limiting and usage optimization
 
 ### Linking Cross-Chain Assets
 
@@ -138,138 +265,6 @@ The web app will be available at `http://localhost:3000`
 3. **Verify Connection**: The system validates and links the asset
 4. **Cross-Chain Portfolio**: View all your connected assets in one place
 
-## 🛠️ API Documentation
+**🌟 Axon: Where Cross-Chain Identity Meets AI Innovation**
 
-### NFT Endpoints
-
-- `POST /api/Axon/create` - Create new Axon NFT
-- `GET /api/Axon/:tokenId` - Get NFT metadata and information
-- `POST /api/Axon/update-metadata` - Update NFT metadata
-- `POST /api/Axon/link-asset` - Link cross-chain asset
-- `GET /api/Axon/:tokenId/linked-assets` - Get linked assets
-
-### AI Endpoints
-
-- `POST /api/ai/chat` - Chat with AI persona
-- `GET /api/ai/persona/:tokenId/status` - Get persona status
-- `POST /api/ai/generate-summary` - Generate persona summary
-- `POST /api/ai/persona/:tokenId/process` - Process persona data
-
-## 🧪 Testing
-
-### Smart Contracts
-
-```bash
-cd contracts
-npm test
-```
-
-### Backend API
-
-```bash
-cd backend
-npm test
-```
-
-### Frontend
-
-```bash
-cd frontend
-npm test
-```
-
-## 📋 Development Scripts
-
-### Root Level Commands
-
-```bash
-# Install all dependencies
-npm run install:all
-
-# Start all services
-npm run dev:all
-
-# Build all components
-npm run build:all
-
-# Clean all builds
-npm run clean:all
-```
-
-### Individual Component Commands
-
-Each component (`contracts`, `backend`, `frontend`) has its own set of npm scripts. Refer to their respective `package.json` files for detailed commands.
-
-## 🔧 Configuration
-
-### ZetaChain Network Configuration
-
-The project is configured for ZetaChain testnet by default. To use mainnet:
-
-1. Update `RPC_URL` to `https://rpc.ankr.com/zetachain_evm`
-2. Change `NEXT_PUBLIC_CHAIN_ID` to `7000`
-3. Ensure you have mainnet ZETA tokens
-
-### IPFS Configuration
-
-Using Pinata for IPFS storage:
-
-1. Create account at [pinata.cloud](https://pinata.cloud)
-2. Generate API keys
-3. Add keys to environment configuration
-
-### AI Configuration
-
-Using Google Generative AI (Gemini):
-
-1. Get API key from [Google AI Studio](https://makersuite.google.com/app/apikey)
-2. Add key to `GEMINI_API_KEY` environment variable
-
-## 🚀 Deployment
-
-### Production Environment
-
-1. **Smart Contracts**: Deploy to ZetaChain mainnet
-2. **Backend**: Deploy to cloud service (AWS, Vercel, etc.)
-3. **Frontend**: Deploy to Vercel, Netlify, or similar platform
-
-### Environment Variables
-
-Ensure all production environment variables are set:
-
-- Database connections (if added)
-- API keys for external services
-- Correct network configurations
-- Security keys and secrets
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🆘 Support
-
-- **Documentation**: Check the `/docs` folder for detailed guides
-- **Issues**: Open an issue on GitHub for bugs or feature requests
-- **Community**: Join our Discord for discussions and support
-
-## 🙏 Acknowledgments
-
-- **ZetaChain**: For the omnichain infrastructure
-- **OpenZeppelin**: For secure smart contract libraries
-- **Pinata**: For reliable IPFS storage
-- **Google AI**: For advanced language model capabilities
-- **The Community**: For feedback and contributions
-
----
-
-Built with ❤️ for the ZetaChain Hackathon
-
-_Axon - Where your digital identity comes alive_
+_Built for the ZetaChain ecosystem • Powered by cutting-edge AI • Secured by battle-tested infrastructure_
