@@ -1,4 +1,5 @@
-const { ethers } = require("hardhat");
+import hre from "hardhat";
+const { ethers } = hre;
 
 interface DeploymentInfo {
   network: string;
@@ -16,11 +17,12 @@ async function main(): Promise<void> {
   const [deployer] = await ethers.getSigners();
   console.log("Deploying contracts with account:", deployer.address);
 
-  // Check balance
-  const balance = await deployer.getBalance();
-  console.log("Account balance:", ethers.utils.formatEther(balance), "ZETA");
+  // Check balance (Ethers v6 syntax)
+  const balance = await ethers.provider.getBalance(deployer.address);
+  console.log("Account balance:", ethers.formatEther(balance), "ZETA");
 
-  if (balance.lt(ethers.utils.parseEther("0.1"))) {
+  if (balance < ethers.parseEther("0.1")) {
+    // Simplified comparison
     throw new Error(
       "Insufficient balance for deployment. Need at least 0.1 ZETA"
     );
@@ -32,22 +34,24 @@ async function main(): Promise<void> {
 
   // Deploy with explicit gas settings
   const omniSoul = await OmniSoul.deploy({
-    gasLimit: 3000000,
-    gasPrice: ethers.utils.parseUnits("20", "gwei"),
+    gasLimit: 5000000,
+    gasPrice: ethers.parseUnits("50", "gwei"),
   });
 
-  console.log("⏳ Deployment transaction sent. Waiting for confirmation...");
-  console.log("🔗 Transaction hash:", omniSoul.deployTransaction.hash);
+  // Ethers v6 automatically waits for the transaction to be mined before returning
+  // The deployTransaction promise resolves when the transaction is sent
+  // The omniSoul.waitForDeployment() promise resolves when the contract is deployed
+  await omniSoul.waitForDeployment();
 
-  await omniSoul.deployed();
+  const deployTx = omniSoul.deploymentTransaction();
 
   console.log("✅ OmniSoul contract deployed successfully!");
-  console.log("📍 Contract address:", omniSoul.address);
-  console.log("🔗 Transaction hash:", omniSoul.deployTransaction.hash);
+  console.log("📍 Contract address:", await omniSoul.getAddress());
+  console.log("🔗 Transaction hash:", deployTx.hash);
 
   // Wait for a few confirmations
   console.log("⏳ Waiting for confirmations...");
-  await omniSoul.deployTransaction.wait(2);
+  await deployTx.wait(2);
 
   console.log("✅ Contract confirmed!");
 
@@ -68,10 +72,10 @@ async function main(): Promise<void> {
   // Save deployment info
   const deploymentInfo: DeploymentInfo = {
     network: "zetachain_testnet",
-    contractAddress: omniSoul.address,
+    contractAddress: await omniSoul.getAddress(),
     deployerAddress: deployer.address,
-    transactionHash: omniSoul.deployTransaction.hash,
-    blockNumber: omniSoul.deployTransaction.blockNumber || 0,
+    transactionHash: deployTx.hash,
+    blockNumber: deployTx.blockNumber || 0,
     timestamp: new Date().toISOString(),
   };
 
@@ -80,7 +84,7 @@ async function main(): Promise<void> {
 
   console.log("\n💡 Next steps:");
   console.log("1. Update your .env file with the contract address:");
-  console.log(`   CONTRACT_ADDRESS=${omniSoul.address}`);
+  console.log(`   CONTRACT_ADDRESS=${await omniSoul.getAddress()}`);
   console.log("2. Start the backend server");
   console.log("3. Test the contract interaction");
 }
