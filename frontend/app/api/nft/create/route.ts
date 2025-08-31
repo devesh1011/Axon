@@ -147,7 +147,7 @@ export async function POST(request: NextRequest) {
       attributes: [
         {
           trait_type: "Type",
-          value: "Omni-Soul",
+          value: "Axon",
         },
         {
           trait_type: "Files Uploaded",

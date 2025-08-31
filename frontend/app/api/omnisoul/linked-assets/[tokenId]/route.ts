@@ -18,10 +18,11 @@ export async function GET(
     }
 
     // Fetch linked assets for the token
+    // Handle large token IDs by using string comparison instead of integer
     const { data: linkedAssets, error } = await supabase
       .from("linked_assets")
       .select("*")
-      .eq("omni_soul_token_id", parseInt(tokenId))
+      .eq("omni_soul_token_id", tokenId)
       .order("linked_at", { ascending: false });
 
     if (error) {

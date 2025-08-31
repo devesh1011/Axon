@@ -153,10 +153,10 @@ export default function GalleryPage() {
           {/* Header */}
           <div className="mb-8">
             <h1 className="text-4xl font-bold bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent mb-2">
-              Omni-Soul Gallery
+              Axon Gallery
             </h1>
             <p className="text-gray-400">
-              Explore all Omni-Soul NFTs created by the community
+              Explore all Axon NFTs created by the community
             </p>
           </div>
 
@@ -241,7 +241,7 @@ export default function GalleryPage() {
               <p className="text-gray-400 mb-6">
                 {searchQuery
                   ? "Try adjusting your search terms"
-                  : "Be the first to create an Omni-Soul NFT!"}
+                  : "Be the first to create an Axon NFT!"}
               </p>
               {!searchQuery && (
                 <Button onClick={() => router.push("/create")}>
@@ -304,9 +304,9 @@ export default function GalleryPage() {
                           <h3 className="text-xl font-semibold text-white mb-2 line-clamp-1">
                             {nft.name}
                           </h3>
-                          <Badge variant="outline" className="text-xs">
+                          {/* <Badge variant="outline" className="text-xs">
                             #{nft.tokenId}
-                          </Badge>
+                          </Badge> */}
                         </div>
 
                         <p className="text-gray-400 text-sm mb-4 line-clamp-2">

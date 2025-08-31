@@ -1,18 +1,18 @@
-"use client"
-import { useSearchParams } from "next/navigation"
-import { Navbar } from "@/components/Navbar"
-import { NetworkGuard } from "@/components/NetworkGuard"
-import { EvmVerification } from "@/components/EvmVerification"
-import { SolanaVerification } from "@/components/SolanaVerification"
-import { Card } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Badge } from "@/components/ui/badge"
-import { Link, Zap } from "lucide-react"
-import { motion } from "framer-motion"
+"use client";
+import { useSearchParams } from "next/navigation";
+import { Navbar } from "@/components/Navbar";
+import { NetworkGuard } from "@/components/NetworkGuard";
+import { EvmVerification } from "@/components/EvmVerification";
+import { SolanaVerification } from "@/components/SolanaVerification";
+import { Card } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Link, Zap } from "lucide-react";
+import { motion } from "framer-motion";
 
 export default function LinkPage() {
-  const searchParams = useSearchParams()
-  const tokenId = searchParams.get("tokenId")
+  const searchParams = useSearchParams();
+  const tokenId = searchParams.get("tokenId");
 
   return (
     <NetworkGuard requireConnection>
@@ -32,12 +32,24 @@ export default function LinkPage() {
                 Link Cross-Chain Assets
               </h1>
               <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-6">
-                Connect your existing NFTs from other blockchains to your Omni-Soul persona
+                Connect your existing NFTs from other blockchains to your Axon
+                persona
               </p>
               {tokenId && (
                 <Badge variant="outline" className="text-neon-cyan">
                   Linking to Token #{tokenId}
                 </Badge>
+              )}
+              {!tokenId && (
+                <div className="p-4 bg-card/50 rounded-lg border border-neon-magenta/20 max-w-md mx-auto">
+                  <p className="text-sm text-muted-foreground mb-2">
+                    No specific token selected
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    You can link assets to any of your Axon personas from your
+                    dashboard
+                  </p>
+                </div>
               )}
             </div>
 
@@ -48,17 +60,21 @@ export default function LinkPage() {
                   <Link className="h-6 w-6 text-background" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold mb-2">How Cross-Chain Linking Works</h3>
+                  <h3 className="text-xl font-bold mb-2">
+                    How Cross-Chain Linking Works
+                  </h3>
                   <div className="space-y-2 text-sm text-muted-foreground">
                     <p>
-                      • <strong>Verify Ownership:</strong> We check that you own the NFT on the source blockchain
+                      • <strong>Verify Ownership:</strong> We check that you own
+                      the NFT on the source blockchain
                     </p>
                     <p>
-                      • <strong>Link to Persona:</strong> The verified asset gets linked to your Omni-Soul on ZetaChain
+                      • <strong>Link to Persona:</strong> The verified asset
+                      gets linked to your Axon on ZetaChain
                     </p>
                     <p>
-                      • <strong>Maintain Ownership:</strong> Your original NFT stays on its native chain - we only
-                      create a reference
+                      • <strong>Maintain Ownership:</strong> Your original NFT
+                      stays on its native chain - we only create a reference
                     </p>
                   </div>
                 </div>
@@ -68,11 +84,17 @@ export default function LinkPage() {
             {/* Verification Tabs */}
             <Tabs defaultValue="evm" className="w-full">
               <TabsList className="grid w-full grid-cols-2 mb-8">
-                <TabsTrigger value="evm" className="flex items-center space-x-2">
+                <TabsTrigger
+                  value="evm"
+                  className="flex items-center space-x-2"
+                >
                   <Zap className="h-4 w-4" />
                   <span>EVM Chains</span>
                 </TabsTrigger>
-                <TabsTrigger value="solana" className="flex items-center space-x-2">
+                <TabsTrigger
+                  value="solana"
+                  className="flex items-center space-x-2"
+                >
                   <div className="w-4 h-4 bg-gradient-to-br from-purple-400 to-pink-400 rounded-full" />
                   <span>Solana</span>
                 </TabsTrigger>
@@ -82,7 +104,9 @@ export default function LinkPage() {
                 <div className="grid gap-6">
                   <Card className="glass p-6">
                     <div className="mb-6">
-                      <h3 className="text-xl font-bold text-neon-cyan mb-2">Supported EVM Chains</h3>
+                      <h3 className="text-xl font-bold text-neon-cyan mb-2">
+                        Supported EVM Chains
+                      </h3>
                       <div className="flex flex-wrap gap-2">
                         <Badge variant="secondary">Ethereum</Badge>
                         <Badge variant="secondary">Polygon</Badge>
@@ -92,7 +116,8 @@ export default function LinkPage() {
                       </div>
                     </div>
                     <p className="text-sm text-muted-foreground mb-4">
-                      Enter your NFT contract address and token ID to verify ownership on any supported EVM chain.
+                      Enter your NFT contract address and token ID to verify
+                      ownership on any supported EVM chain.
                     </p>
                   </Card>
 
@@ -104,11 +129,14 @@ export default function LinkPage() {
                 <div className="grid gap-6">
                   <Card className="glass p-6">
                     <div className="mb-6">
-                      <h3 className="text-xl font-bold text-neon-magenta mb-2">Solana NFTs</h3>
+                      <h3 className="text-xl font-bold text-neon-magenta mb-2">
+                        Solana NFTs
+                      </h3>
                       <Badge variant="secondary">Solana Mainnet</Badge>
                     </div>
                     <p className="text-sm text-muted-foreground mb-4">
-                      Enter your NFT mint address and wallet address to verify ownership on Solana.
+                      Enter your NFT mint address and wallet address to verify
+                      ownership on Solana.
                     </p>
                   </Card>
 
@@ -122,17 +150,21 @@ export default function LinkPage() {
               <h3 className="text-lg font-bold mb-4">Important Notes</h3>
               <div className="space-y-2 text-sm text-muted-foreground">
                 <p>
-                  • <strong>Gas Fees:</strong> Linking assets requires a transaction on ZetaChain (small ZETA fee)
+                  • <strong>Gas Fees:</strong> Linking assets requires a
+                  transaction on ZetaChain (small ZETA fee)
                 </p>
                 <p>
-                  • <strong>Verification:</strong> We only verify ownership at the time of linking - transfers after
-                  linking won't update automatically
+                  • <strong>Verification:</strong> We only verify ownership at
+                  the time of linking - transfers after linking won't update
+                  automatically
                 </p>
                 <p>
-                  • <strong>Privacy:</strong> Only the contract address, token ID, and chain are stored on-chain
+                  • <strong>Privacy:</strong> Only the contract address, token
+                  ID, and chain are stored on-chain
                 </p>
                 <p>
-                  • <strong>Reversible:</strong> Asset links can be updated or removed by the Omni-Soul owner
+                  • <strong>Reversible:</strong> Asset links can be updated or
+                  removed by the Axon owner
                 </p>
               </div>
             </Card>
@@ -140,5 +172,5 @@ export default function LinkPage() {
         </div>
       </div>
     </NetworkGuard>
-  )
+  );
 }

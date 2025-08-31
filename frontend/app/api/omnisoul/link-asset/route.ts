@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
       .from("linked_assets")
       .insert({
         profile_id: profile.id,
-        omni_soul_token_id: parseInt(body.tokenId),
+        omni_soul_token_id: body.tokenId, // Store as string to handle large numbers
         chain_name: body.chainName,
         asset_address: body.assetAddress,
         asset_id: body.assetId || "0",

@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
       .post(`${request.nextUrl.origin}/api/ipfs/pin-json`, {
         json: {
           data: metadata,
-          pinName: `omni-soul-metadata-${metadata.name
+          pinName: `Axon-metadata-${metadata.name
             .replace(/\s+/g, "-")
             .toLowerCase()}`,
         },

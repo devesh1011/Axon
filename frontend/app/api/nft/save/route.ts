@@ -107,8 +107,8 @@ export async function POST(request: NextRequest) {
         {
           profile_id: profileId,
           token_id: tokenId,
-          name: metadata?.name || `Omni-Soul #${tokenId}`,
-          description: metadata?.description || "An Omni-Soul NFT.",
+          name: metadata?.name || `Axon #${tokenId}`,
+          description: metadata?.description || "An Axon NFT.",
           metadata_uri: tokenURI,
           pinata_cid: tokenURI.replace("ipfs://", ""),
           image_cid: metadata?.image?.replace("ipfs://", "") || null,

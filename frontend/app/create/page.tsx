@@ -21,7 +21,10 @@ import {
   Sparkles,
 } from "lucide-react";
 import { motion } from "framer-motion";
-import { useOmniSoulContract } from "@/hooks/useContract";
+import {
+  useOmniSoulContract,
+  useNextTokenIdForWallet,
+} from "@/hooks/useContract";
 import { toast } from "sonner";
 
 interface PersonalData {
@@ -60,6 +63,11 @@ export default function CreatePage() {
   const [isPostProcessing, setIsPostProcessing] = useState(false);
   const [isFullyComplete, setIsFullyComplete] = useState(false);
   const [createdTokenURI, setCreatedTokenURI] = useState<string>("");
+
+  // Get predicted token ID for the current wallet
+  const { data: predictedTokenId } = useNextTokenIdForWallet(
+    address || "0x0000000000000000000000000000000000000000"
+  );
 
   // Function to extract token ID from transaction receipt
   const extractTokenIdFromReceipt = (receipt: unknown): string | null => {
@@ -160,7 +168,7 @@ export default function CreatePage() {
     txHash: string
   ) => {
     setIsPostProcessing(true);
-    toast.info("Transaction confirmed! Setting up your Omni-Soul...");
+    toast.info("Transaction confirmed! Setting up your Axon...");
 
     try {
       let nftImageCID = "";
@@ -188,7 +196,7 @@ export default function CreatePage() {
         for (const fileData of selectedFiles) {
           const formData = new FormData();
           formData.append("file", fileData.file);
-          formData.append("pinName", `omni-soul-${fileData.name}`);
+          formData.append("pinName", `Axon-${fileData.name}`);
           const response = await fetch("/api/ipfs/upload", {
             method: "POST",
             body: formData,
@@ -217,7 +225,7 @@ export default function CreatePage() {
             description: personalData.description,
             image: `ipfs://${nftImageCID}`,
             attributes: [
-              { trait_type: "Type", value: "Omni-Soul" },
+              { trait_type: "Type", value: "Axon" },
               { trait_type: "Files Uploaded", value: uploadedFileCIDs.length },
               ...(personalData.interests.length > 0
                 ? [
@@ -432,7 +440,7 @@ export default function CreatePage() {
             {/* Header */}
             <div className="text-center mb-12">
               <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-neon-cyan to-neon-magenta bg-clip-text text-transparent mb-4">
-                Create Your Omni-Soul
+                Create Your Axon
               </h1>
               <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
                 Create your complete digital persona in one step: upload files,
@@ -873,13 +881,28 @@ export default function CreatePage() {
                   <Card className="glass p-6">
                     <div className="text-center space-y-4">
                       <h3 className="text-xl font-bold text-neon-cyan">
-                        Ready to Create Your Omni-Soul?
+                        Ready to Create Your Axon?
                       </h3>
                       <p className="text-muted-foreground">
                         {mintedTokenId && isPostProcessing
                           ? "Transaction confirmed! Setting up your files and metadata..."
                           : "This will mint your NFT first, then setup your files and metadata"}
                       </p>
+
+                      {predictedTokenId && (
+                        <div className="p-3 bg-card/50 rounded-lg border border-neon-cyan/20">
+                          <p className="text-sm text-muted-foreground mb-1">
+                            Predicted Token ID:
+                          </p>
+                          <p className="font-mono text-neon-cyan font-bold">
+                            {predictedTokenId.toString()}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            This unique ID is generated based on your wallet
+                            address
+                          </p>
+                        </div>
+                      )}
 
                       <Button
                         onClick={handleCreateOmniSoul}
@@ -913,7 +936,7 @@ export default function CreatePage() {
                         ) : (
                           <>
                             <Sparkles className="h-5 w-5 mr-2" />
-                            Create & Mint Omni-Soul NFT
+                            Create & Mint Axon NFT
                           </>
                         )}
                       </Button>
@@ -940,9 +963,9 @@ export default function CreatePage() {
                           Congratulations!
                         </h3>
                         <p className="text-lg text-muted-foreground mb-4">
-                          Your Omni-Soul has been successfully minted on
-                          ZetaChain! All files have been uploaded and metadata
-                          has been created.
+                          Your Axon has been successfully minted on ZetaChain!
+                          All files have been uploaded and metadata has been
+                          created.
                         </p>
                         <div className="space-y-2">
                           <Badge variant="secondary" className="text-sm">
