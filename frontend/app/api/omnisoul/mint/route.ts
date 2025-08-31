@@ -3,29 +3,13 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 import { type NextRequest, NextResponse } from "next/server";
-import {
-  checkRateLimit,
-  basicRateLimiter,
-} from "../../../../lib/server/rate-limit";
 import { getContract } from "viem";
 import { publicClient } from "../../../../lib/server/viem-server";
 import { ZETACHAIN_CONFIG } from "../../../../lib/chains";
 import OmniSoulABI from "../../../../lib/abis/OmniSoul.json";
 
-function getClientIP(request: NextRequest): string {
-  const forwarded = request.headers.get("x-forwarded-for");
-  return forwarded
-    ? forwarded.split(",")[0]
-    : request.headers.get("x-real-ip") || "unknown";
-}
-
 export async function POST(request: NextRequest) {
   try {
-    const clientIP = getClientIP(request);
-
-    // Rate limiting
-    await checkRateLimit(basicRateLimiter, clientIP);
-
     const body = await request.json();
     const { owner, tokenURI } = body;
 

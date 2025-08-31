@@ -3,11 +3,6 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 import { type NextRequest, NextResponse } from "next/server";
-import {
-  checkRateLimit,
-  basicRateLimiter,
-} from "../../../../lib/server/rate-limit";
-import { pinJSON } from "../../../../lib/server/pinata";
 
 function getClientIP(request: NextRequest): string {
   const forwarded = request.headers.get("x-forwarded-for");
@@ -18,10 +13,7 @@ function getClientIP(request: NextRequest): string {
 
 export async function POST(request: NextRequest) {
   try {
-    const clientIP = getClientIP(request);
-
     // Rate limiting
-    await checkRateLimit(basicRateLimiter, clientIP);
 
     const body = await request.json();
 

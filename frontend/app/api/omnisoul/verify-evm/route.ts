@@ -2,13 +2,7 @@ export const runtime = "nodejs";
 
 import { type NextRequest, NextResponse } from "next/server";
 import { VerifyEvmSchema } from "@/lib/zodSchemas";
-import { SimpleRateLimiter } from "@/lib/rateLimiter";
 import { ethers } from "ethers";
-
-const rateLimiter = new SimpleRateLimiter({
-  points: Number.parseInt(process.env.RATE_LIMIT_POINTS || "30"),
-  duration: Number.parseInt(process.env.RATE_LIMIT_DURATION || "60"),
-});
 
 // Chain RPC mappings
 const CHAIN_RPCS: Record<string, string> = {
@@ -32,20 +26,6 @@ const ERC721_ABI = [
 
 export async function POST(request: NextRequest) {
   try {
-    // Rate limiting
-    try {
-      const clientIP =
-        request.headers.get("x-forwarded-for")?.split(",")[0] ||
-        request.headers.get("x-real-ip") ||
-        "anonymous";
-      await rateLimiter.consume(clientIP);
-    } catch {
-      return NextResponse.json(
-        { success: false, error: "Too many requests" },
-        { status: 429 }
-      );
-    }
-
     const body = await request.json();
 
     // Validate request body
