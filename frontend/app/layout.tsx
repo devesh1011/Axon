@@ -22,10 +22,10 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Omni-Soul | Mint Your Digital Persona",
+  title: "Axon | Mint Your Digital Persona",
   description:
     "Create, mint, and chat with AI-powered digital personas on ZetaChain. Link cross-chain assets and build your omnichain identity.",
-  generator: "Omni-Soul",
+  generator: "Axon",
   keywords: [
     "NFT",
     "ZetaChain",
@@ -35,29 +35,29 @@ export const metadata: Metadata = {
     "Web3",
     "Blockchain",
   ],
-  authors: [{ name: "Omni-Soul Team" }],
-  creator: "Omni-Soul",
-  publisher: "Omni-Soul",
+  authors: [{ name: "Axon Team" }],
+  creator: "Axon",
+  publisher: "Axon",
   openGraph: {
     type: "website",
     locale: "en_US",
     url: "https://omnisoul.app",
-    title: "Omni-Soul | Mint Your Digital Persona",
+    title: "Axon | Mint Your Digital Persona",
     description:
       "Create, mint, and chat with AI-powered digital personas on ZetaChain",
-    siteName: "Omni-Soul",
+    siteName: "Axon",
     images: [
       {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "Omni-Soul - Digital Persona Platform",
+        alt: "Axon - Digital Persona Platform",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Omni-Soul | Mint Your Digital Persona",
+    title: "Axon | Mint Your Digital Persona",
     description:
       "Create, mint, and chat with AI-powered digital personas on ZetaChain",
     images: ["/og-image.png"],
