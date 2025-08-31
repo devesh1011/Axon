@@ -1,52 +1,58 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Card } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Badge } from "@/components/ui/badge"
-import { X, Plus, Sparkles } from "lucide-react"
-import { motion } from "framer-motion"
-import { toast } from "sonner"
-import ky from "ky"
+import { useState } from "react";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { X, Plus, Sparkles } from "lucide-react";
+import { motion } from "framer-motion";
+import { toast } from "sonner";
+import ky from "ky";
 
 interface MetadataFormProps {
-  uploadedFiles: { cid: string; name: string; type: string }[]
-  onMetadataCreated?: (cid: string) => void
+  uploadedFiles: { cid: string; name: string; type: string }[];
+  onMetadataCreated?: (cid: string) => void;
 }
 
 interface Attribute {
-  trait_type: string
-  value: string
+  trait_type: string;
+  value: string;
 }
 
-export function MetadataForm({ uploadedFiles, onMetadataCreated }: MetadataFormProps) {
-  const [name, setName] = useState("")
-  const [description, setDescription] = useState("")
-  const [attributes, setAttributes] = useState<Attribute[]>([])
-  const [newAttribute, setNewAttribute] = useState({ trait_type: "", value: "" })
-  const [isCreating, setIsCreating] = useState(false)
+export function MetadataForm({
+  uploadedFiles,
+  onMetadataCreated,
+}: MetadataFormProps) {
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [attributes, setAttributes] = useState<Attribute[]>([]);
+  const [newAttribute, setNewAttribute] = useState({
+    trait_type: "",
+    value: "",
+  });
+  const [isCreating, setIsCreating] = useState(false);
 
   const addAttribute = () => {
     if (newAttribute.trait_type && newAttribute.value) {
-      setAttributes((prev) => [...prev, newAttribute])
-      setNewAttribute({ trait_type: "", value: "" })
+      setAttributes((prev) => [...prev, newAttribute]);
+      setNewAttribute({ trait_type: "", value: "" });
     }
-  }
+  };
 
   const removeAttribute = (index: number) => {
-    setAttributes((prev) => prev.filter((_, i) => i !== index))
-  }
+    setAttributes((prev) => prev.filter((_, i) => i !== index));
+  };
 
   const createMetadata = async () => {
     if (!name.trim()) {
-      toast.error("Name is required")
-      return
+      toast.error("Name is required");
+      return;
     }
 
-    setIsCreating(true)
+    setIsCreating(true);
 
     try {
       const metadata = {
@@ -69,37 +75,42 @@ export function MetadataForm({ uploadedFiles, onMetadataCreated }: MetadataFormP
               ],
         external_url: `${window.location.origin}/persona/`,
         created_at: new Date().toISOString(),
-      }
+      };
 
       const response = await ky
         .post("/api/ipfs/pin-json", {
           json: {
             data: metadata,
-            pinName: `omni-soul-metadata-${name.replace(/\s+/g, "-").toLowerCase()}`,
+            pinName: `Axon-metadata-${name.replace(/\s+/g, "-").toLowerCase()}`,
           },
         })
-        .json<{ success: boolean; data?: { cid: string }; error?: string }>()
+        .json<{ success: boolean; data?: { cid: string }; error?: string }>();
 
       if (response.success && response.data) {
-        toast.success("Metadata created and uploaded to IPFS!")
-        onMetadataCreated?.(response.data.cid)
+        toast.success("Metadata created and uploaded to IPFS!");
+        onMetadataCreated?.(response.data.cid);
       } else {
-        throw new Error(response.error || "Failed to create metadata")
+        throw new Error(response.error || "Failed to create metadata");
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to create metadata"
-      toast.error(errorMessage)
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to create metadata";
+      toast.error(errorMessage);
     } finally {
-      setIsCreating(false)
+      setIsCreating(false);
     }
-  }
+  };
 
   return (
     <Card className="glass p-6">
       <div className="space-y-6">
         <div>
-          <Label className="text-lg font-semibold text-neon-magenta">Persona Metadata</Label>
-          <p className="text-sm text-muted-foreground mt-1">Define your digital persona's identity and attributes</p>
+          <Label className="text-lg font-semibold text-neon-magenta">
+            Persona Metadata
+          </Label>
+          <p className="text-sm text-muted-foreground mt-1">
+            Define your digital persona's identity and attributes
+          </p>
         </div>
 
         <div className="space-y-4">
@@ -152,7 +163,9 @@ export function MetadataForm({ uploadedFiles, onMetadataCreated }: MetadataFormP
                   animate={{ opacity: 1, x: 0 }}
                   className="flex items-center space-x-2 p-2 bg-card/50 rounded border"
                 >
-                  <span className="text-sm font-medium text-neon-cyan">{attr.trait_type}:</span>
+                  <span className="text-sm font-medium text-neon-cyan">
+                    {attr.trait_type}:
+                  </span>
                   <span className="text-sm">{attr.value}</span>
                   <Button
                     variant="ghost"
@@ -169,13 +182,23 @@ export function MetadataForm({ uploadedFiles, onMetadataCreated }: MetadataFormP
                 <Input
                   placeholder="Trait type"
                   value={newAttribute.trait_type}
-                  onChange={(e) => setNewAttribute((prev) => ({ ...prev, trait_type: e.target.value }))}
+                  onChange={(e) =>
+                    setNewAttribute((prev) => ({
+                      ...prev,
+                      trait_type: e.target.value,
+                    }))
+                  }
                   className="flex-1"
                 />
                 <Input
                   placeholder="Value"
                   value={newAttribute.value}
-                  onChange={(e) => setNewAttribute((prev) => ({ ...prev, value: e.target.value }))}
+                  onChange={(e) =>
+                    setNewAttribute((prev) => ({
+                      ...prev,
+                      value: e.target.value,
+                    }))
+                  }
                   className="flex-1"
                 />
                 <Button
@@ -211,5 +234,5 @@ export function MetadataForm({ uploadedFiles, onMetadataCreated }: MetadataFormP
         </Button>
       </div>
     </Card>
-  )
+  );
 }

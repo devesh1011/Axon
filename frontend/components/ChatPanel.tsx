@@ -29,14 +29,18 @@ export function ChatPanel({ tokenId, personaName }: ChatPanelProps) {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Auto-scroll to the latest message
+  // Auto-scroll to the latest message within the ScrollArea
   useEffect(() => {
-    console.log("[ChatPanel] Current messages:", messages);
     if (scrollAreaRef.current) {
-      const viewport = scrollAreaRef.current.querySelector(
-        "div[data-radix-scroll-area-viewport]"
-      );
-      if (viewport) viewport.scrollTop = viewport.scrollHeight;
+      const scrollContainer = scrollAreaRef.current.querySelector(
+        "[data-radix-scroll-area-viewport]"
+      ) as HTMLDivElement;
+      if (scrollContainer) {
+        scrollContainer.scrollTo({
+          top: scrollContainer.scrollHeight,
+          behavior: "smooth",
+        });
+      }
     }
   }, [messages]);
 
@@ -60,10 +64,6 @@ export function ChatPanel({ tokenId, personaName }: ChatPanelProps) {
             ? msg.parts
             : [{ type: "text", text: msg.content }],
       }));
-    console.log(
-      "[ChatPanel] Updated messages with user input:",
-      updatedMessages
-    );
     setMessages(updatedMessages);
     setInput("");
     setIsLoading(true);
@@ -85,7 +85,6 @@ export function ChatPanel({ tokenId, personaName }: ChatPanelProps) {
       }
 
       const data = await response.json();
-      console.log("[ChatPanel] API response:", data);
       if (!data.answer) {
         throw new Error("No answer in response");
       }
@@ -96,7 +95,6 @@ export function ChatPanel({ tokenId, personaName }: ChatPanelProps) {
         content: data.answer,
         parts: [{ type: "text", text: data.answer }],
       };
-      console.log("[ChatPanel] Assistant message:", assistantMessage);
       setMessages((prev) => [...prev, assistantMessage].slice(-5));
     } catch (error) {
       console.error("[ChatPanel] Chat error:", error);
@@ -121,7 +119,7 @@ export function ChatPanel({ tokenId, personaName }: ChatPanelProps) {
   };
 
   return (
-    <Card className="glass h-[700px] flex flex-col">
+    <Card className="glass h-full flex flex-col">
       <div className="p-4 border-b border-border/50">
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 bg-gradient-to-br from-neon-cyan to-neon-magenta rounded-full flex items-center justify-center">
@@ -179,7 +177,7 @@ export function ChatPanel({ tokenId, personaName }: ChatPanelProps) {
 
       <form
         onSubmit={handleFormSubmit}
-        className="p-4 border-t border-border/50"
+        className="p-4 border-t border-border/50 bg-background/95 backdrop-blur-sm"
       >
         <div className="flex space-x-2">
           <Input
@@ -188,17 +186,17 @@ export function ChatPanel({ tokenId, personaName }: ChatPanelProps) {
             onChange={(e) => setInput(e.target.value)}
             onKeyPress={handleKeyPress}
             placeholder={`Ask ${personaName} anything...`}
-            disabled={isLoading} // Changed from status !== "ready"
+            disabled={isLoading}
             className="flex-1"
             maxLength={1000}
           />
           <Button
             type="submit"
-            disabled={!input.trim() || isLoading} // Changed from status !== "ready"
+            disabled={!input.trim() || isLoading}
             size="sm"
             className="neon-glow-cyan px-3"
           >
-            {isLoading ? ( // Changed from status === "streaming"
+            {isLoading ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <Send className="h-4 w-4" />

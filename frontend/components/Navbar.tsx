@@ -2,10 +2,11 @@
 
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { Button } from "@/components/ui/button";
-import { Brain, LogOut } from "lucide-react";
+import { LogOut } from "lucide-react";
 import NextLink from "next/link";
 import { motion } from "framer-motion";
 import { useDisconnect, useAccount } from "wagmi";
+import Image from "next/image";
 
 export function Navbar() {
   const { disconnect, isPending } = useDisconnect();
@@ -21,11 +22,17 @@ export function Navbar() {
       <div className="container mx-auto px-4 py-4 flex items-center justify-between">
         {/* Logo */}
         <NextLink href="/" className="flex items-center space-x-2 group">
-          <div className="w-8 h-8 bg-gradient-to-br from-neon-cyan to-neon-magenta rounded-full flex items-center justify-center group-hover:neon-glow-cyan transition-all duration-300">
-            <Brain className="h-5 w-5 text-background" />
+          <div className="w-8 h-8 bg-gradient-to-br from-neon-cyan to-neon-magenta rounded-full flex items-center justify-center group-hover:neon-glow-cyan transition-all duration-300 overflow-hidden">
+            <Image
+              src="/logo.png"
+              alt="Axon Logo"
+              width={20}
+              height={20}
+              className="object-contain"
+            />
           </div>
           <span className="text-xl font-bold bg-gradient-to-r from-neon-cyan to-neon-magenta bg-clip-text text-transparent">
-            OMNI-SOUL
+            Axon
           </span>
         </NextLink>
 

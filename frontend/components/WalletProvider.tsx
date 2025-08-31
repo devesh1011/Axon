@@ -13,7 +13,7 @@ import { zetachainAthensTestnet } from "@/lib/chains";
 import "@rainbow-me/rainbowkit/styles.css"; // ⬅️ Important!
 
 const config = getDefaultConfig({
-  appName: "Omni-Soul",
+  appName: "Axon",
   projectId:
     process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "your-project-id",
   chains: [zetachainAthensTestnet],

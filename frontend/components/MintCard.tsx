@@ -54,7 +54,7 @@ export function MintCard({
       setMintedTokenId(simulatedTokenId);
       onMintSuccess?.(simulatedTokenId);
       toast.success(
-        `Omni-Soul NFT minted successfully! Token ID: ${simulatedTokenId}`
+        `Axon NFT minted successfully! Token ID: ${simulatedTokenId}`
       );
     }
   }, [isConfirmed, hash, mintedTokenId, onMintSuccess]);
@@ -66,7 +66,7 @@ export function MintCard({
     }
 
     if (!personalData?.name || !personalData?.description) {
-      toast.error("Please provide a name and description for your Omni-Soul");
+      toast.error("Please provide a name and description for your Axon");
       return;
     }
 
@@ -85,7 +85,7 @@ export function MintCard({
         attributes: [
           {
             trait_type: "Type",
-            value: "Omni-Soul",
+            value: "Axon",
           },
           {
             trait_type: "Files Uploaded",
@@ -161,7 +161,7 @@ export function MintCard({
       <div className="space-y-6">
         <div className="text-center">
           <h3 className="text-2xl font-bold text-neon-cyan mb-2">
-            Mint Your Omni-Soul
+            Mint Your Axon
           </h3>
           <p className="text-muted-foreground">
             Create your AI-powered digital persona as an NFT on ZetaChain
@@ -345,7 +345,7 @@ export function MintCard({
             ) : (
               <>
                 <Sparkles className="h-4 w-4 mr-2" />
-                Mint Omni-Soul NFT
+                Mint Axon NFT
               </>
             )}
           </Button>
@@ -353,7 +353,7 @@ export function MintCard({
 
         {!address && (
           <p className="text-sm text-muted-foreground text-center">
-            Please connect your wallet to mint your Omni-Soul NFT
+            Please connect your wallet to mint your Axon NFT
           </p>
         )}
       </div>

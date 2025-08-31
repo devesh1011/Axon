@@ -263,7 +263,7 @@ export function SolanaVerification({ tokenId }: SolanaVerificationProps) {
                   <div className="space-y-3">
                     <div className="flex items-center justify-between p-3 bg-card/50 rounded-lg border">
                       <div>
-                        <p className="font-medium">Link to Omni-Soul</p>
+                        <p className="font-medium">Link to Axon</p>
                         <p className="text-sm text-muted-foreground">
                           Connect this Solana NFT to your persona
                         </p>

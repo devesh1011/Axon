@@ -94,7 +94,7 @@ export function UploadCard({
     try {
       const formData = new FormData();
       formData.append("file", fileData.file);
-      formData.append("pinName", `omni-soul-${fileData.file.name}`);
+      formData.append("pinName", `Axon-${fileData.file.name}`);
 
       const response = await ky
         .post("/api/ipfs/upload", {
