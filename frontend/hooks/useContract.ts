@@ -96,3 +96,23 @@ export function useTokenOwner(tokenId: bigint) {
     chainId: zetaChainAthens.id,
   });
 }
+
+export function useWalletTokenCount(walletAddress: `0x${string}`) {
+  return useReadContract({
+    address: contractAddress,
+    abi: omniSoulAbi,
+    functionName: "getWalletTokenCount",
+    args: [walletAddress],
+    chainId: zetaChainAthens.id,
+  });
+}
+
+export function useNextTokenIdForWallet(walletAddress: `0x${string}`) {
+  return useReadContract({
+    address: contractAddress,
+    abi: omniSoulAbi,
+    functionName: "getNextTokenIdForWallet",
+    args: [walletAddress],
+    chainId: zetaChainAthens.id,
+  });
+}
