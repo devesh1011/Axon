@@ -30,7 +30,7 @@ export default function HomePage() {
             className="mb-8"
           >
             <h1 className="text-6xl md:text-8xl font-bold bg-gradient-to-r from-neon-cyan to-neon-magenta bg-clip-text text-transparent mb-6">
-              OMNI-SOUL
+              Axon
             </h1>
             <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
               Mint your digital persona as an NFT on ZetaChain. Upload your data
@@ -47,7 +47,7 @@ export default function HomePage() {
             <Button asChild size="lg" className="neon-glow-cyan">
               <NextLink href="/create">
                 <Sparkles className="mr-2 h-5 w-5" />
-                Create Omni-Soul
+                Create Axon
               </NextLink>
             </Button>
             <Button
@@ -112,7 +112,7 @@ export default function HomePage() {
             </h3>
             <p className="text-muted-foreground leading-relaxed">
               Link your existing NFTs from Ethereum, Polygon, and Solana to your
-              Omni-Soul persona.
+              Axon persona.
             </p>
           </Card>
         </motion.div>
