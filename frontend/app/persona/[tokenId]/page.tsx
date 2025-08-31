@@ -9,7 +9,15 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Brain, ExternalLink, Link, User } from "lucide-react";
+import {
+  Brain,
+  ExternalLink,
+  Link,
+  User,
+  ChevronDown,
+  ChevronUp,
+  Plus,
+} from "lucide-react";
 import { motion } from "framer-motion";
 import ky from "ky";
 
@@ -23,6 +31,7 @@ interface TokenData {
     image: string;
     personaCid?: string;
     files?: Array<{ cid: string; name: string; type: string }>;
+    uploadedFiles?: Array<{ cid: string; name: string; type: string }>;
     attributes?: Array<{ trait_type: string; value: string }>;
     created_at: string;
   };
@@ -30,7 +39,7 @@ interface TokenData {
 
 interface LinkedAsset {
   id: number;
-  omni_soul_token_id: number;
+  omni_soul_token_id: string;
   chain_name: string;
   asset_address: string;
   asset_id: string;
@@ -47,6 +56,7 @@ export default function PersonaPage() {
   const [linkedAssets, setLinkedAssets] = useState<LinkedAsset[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>("");
+  const [showPersonaInfo, setShowPersonaInfo] = useState(false);
 
   useEffect(() => {
     const fetchTokenData = async () => {
@@ -67,6 +77,8 @@ export default function PersonaPage() {
         ]);
 
         if (tokenResponse.success && tokenResponse.data) {
+          console.log("Token data received:", tokenResponse.data);
+          console.log("Metadata structure:", tokenResponse.data.metadata);
           setTokenData(tokenResponse.data);
         } else {
           setError(tokenResponse.error || "Token not found");
@@ -121,7 +133,6 @@ export default function PersonaPage() {
     }
   };
 
-  // Convert various ipfs:// or raw cid forms to an HTTP gateway URL
   const toIpfsUrl = (uri: string | undefined) => {
     if (!uri) return "";
     if (/^https?:\/\//i.test(uri)) return uri;
@@ -174,7 +185,6 @@ export default function PersonaPage() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-
       <div className="container mx-auto px-4 pt-24 pb-16">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -182,50 +192,96 @@ export default function PersonaPage() {
           transition={{ duration: 0.6 }}
           className="max-w-6xl mx-auto"
         >
-          {/* Header */}
-          <div className="text-center mb-12">
-            <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-neon-cyan to-neon-magenta bg-clip-text text-transparent mb-4">
-              {tokenData.metadata.name}
-            </h1>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-6">
-              {tokenData.metadata.description}
-            </p>
-            <div className="flex items-center justify-center space-x-4">
-              <Badge variant="outline" className="text-neon-cyan">
+          {/* Mobile-Friendly Header */}
+          <div className="text-center mb-8 md:mb-12">
+            <div className="flex items-center justify-center space-x-3 mb-4">
+              <div className="w-12 h-12 md:w-16 md:h-16 bg-gradient-to-br from-neon-cyan to-neon-magenta rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+                {tokenData.metadata.image ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={toIpfsUrl(tokenData.metadata.image)}
+                    alt={tokenData.metadata.name}
+                    className="object-cover w-full h-full"
+                  />
+                ) : (
+                  <Brain className="h-6 w-6 md:h-8 md:w-8 text-background" />
+                )}
+              </div>
+              <div className="text-left">
+                <h1 className="text-2xl md:text-4xl lg:text-6xl font-bold bg-gradient-to-r from-neon-cyan to-neon-magenta bg-clip-text text-transparent">
+                  {tokenData.metadata.name}
+                </h1>
+                <p className="text-sm md:text-lg text-muted-foreground max-w-2xl">
+                  {tokenData.metadata.description}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center justify-center space-x-2 md:space-x-4">
+              <Badge
+                variant="outline"
+                className="text-neon-cyan text-xs md:text-sm"
+              >
                 Token #{tokenData.tokenId}
               </Badge>
-              <Badge variant="outline" className="text-neon-magenta">
+              <Badge
+                variant="outline"
+                className="text-neon-magenta text-xs md:text-sm"
+              >
                 ZetaChain Athens
               </Badge>
             </div>
           </div>
 
-          <div className="grid lg:grid-cols-3 gap-8">
-            {/* Left Column - Persona Info */}
-            <div className="lg:col-span-2 space-y-6">
-              {/* Persona Card */}
-              <Card className="glass p-6">
-                <div className="flex items-start space-x-6">
-                  <div className="w-24 h-24 bg-gradient-to-br from-neon-cyan to-neon-magenta rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
-                    {tokenData.metadata.image ? (
-                      // show image
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={toIpfsUrl(tokenData.metadata.image)}
-                        alt={tokenData.metadata.name}
-                        className="object-cover w-full h-full"
-                      />
-                    ) : (
-                      <Brain className="h-12 w-12 text-background" />
-                    )}
+          <div className="grid lg:grid-cols-1 gap-8">
+            {/* Main Content - Chat Interface */}
+            <div className="space-y-6">
+              {/* Collapsible Persona Info */}
+              <Card className="glass p-4 md:p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center space-x-3 md:space-x-4">
+                    <div className="w-12 h-12 md:w-16 md:h-16 bg-gradient-to-br from-neon-cyan to-neon-magenta rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+                      {tokenData.metadata.image ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={toIpfsUrl(tokenData.metadata.image)}
+                          alt={tokenData.metadata.name}
+                          className="object-cover w-full h-full"
+                        />
+                      ) : (
+                        <Brain className="h-6 w-6 md:h-8 md:w-8 text-background" />
+                      )}
+                    </div>
+                    <div>
+                      <h2 className="text-lg md:text-2xl font-bold">
+                        {tokenData.metadata.name}
+                      </h2>
+                      <p className="text-sm md:text-base text-muted-foreground">
+                        {tokenData.metadata.description}
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <h3 className="text-2xl font-bold mb-2">
-                      {tokenData.metadata.name}
-                    </h3>
-                    <p className="text-muted-foreground mb-4">
-                      {tokenData.metadata.description}
-                    </p>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowPersonaInfo(!showPersonaInfo)}
+                    className="text-neon-cyan hover:text-neon-cyan/80"
+                  >
+                    {showPersonaInfo ? (
+                      <ChevronUp className="h-4 w-4 md:h-5 md:w-5" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4 md:h-5 md:w-5" />
+                    )}
+                  </Button>
+                </div>
+
+                {showPersonaInfo && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="space-y-6"
+                  >
                     <div className="flex items-center space-x-4">
                       <div className="flex items-center space-x-2">
                         <User className="h-4 w-4 text-neon-cyan" />
@@ -246,8 +302,8 @@ export default function PersonaPage() {
                         </Button>
                       </div>
                     </div>
-                  </div>
-                </div>
+                  </motion.div>
+                )}
               </Card>
 
               {/* Tabs for different sections */}
@@ -260,75 +316,125 @@ export default function PersonaPage() {
                 </TabsList>
 
                 <TabsContent value="attributes" className="space-y-4">
-                  {tokenData.metadata.attributes &&
-                  tokenData.metadata.attributes.length > 0 ? (
-                    <Card className="glass p-6">
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                        {tokenData.metadata.attributes.map((attr, index) => (
-                          <div
-                            key={index}
-                            className="p-3 bg-card/50 rounded-lg border text-center"
-                          >
-                            <p className="text-xs text-muted-foreground uppercase tracking-wide">
-                              {attr.trait_type}
+                  {(() => {
+                    const attributes = tokenData.metadata.attributes || [];
+                    console.log("Attributes check:", attributes);
+                    return attributes.length > 0 ? (
+                      <Card className="glass p-6">
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                          {attributes.map((attr, index) => (
+                            <div
+                              key={index}
+                              className="p-3 bg-card/50 rounded-lg border text-center"
+                            >
+                              <p className="text-xs text-muted-foreground uppercase tracking-wide">
+                                {attr.trait_type}
+                              </p>
+                              <p className="font-medium mt-1">{attr.value}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </Card>
+                    ) : (
+                      <Card className="glass p-6 text-center">
+                        <p className="text-muted-foreground">
+                          No attributes defined for this persona
+                        </p>
+                        <details className="mt-4 text-left">
+                          <summary className="cursor-pointer text-sm text-neon-cyan">
+                            Debug: Show metadata structure
+                          </summary>
+                          <pre className="mt-2 text-xs bg-card/50 p-2 rounded overflow-auto">
+                            {JSON.stringify(tokenData.metadata, null, 2)}
+                          </pre>
+                          <div className="mt-2 text-xs">
+                            <p>
+                              <strong>Attributes found:</strong>{" "}
+                              {attributes.length}
                             </p>
-                            <p className="font-medium mt-1">{attr.value}</p>
+                            <p>
+                              <strong>Has attributes property:</strong>{" "}
+                              {!!tokenData.metadata.attributes}
+                            </p>
                           </div>
-                        ))}
-                      </div>
-                    </Card>
-                  ) : (
-                    <Card className="glass p-6 text-center">
-                      <p className="text-muted-foreground">
-                        No attributes defined for this persona
-                      </p>
-                    </Card>
-                  )}
+                        </details>
+                      </Card>
+                    );
+                  })()}
                 </TabsContent>
 
                 <TabsContent value="files" className="space-y-4">
-                  {tokenData.metadata.files &&
-                  tokenData.metadata.files.length > 0 ? (
-                    <Card className="glass p-6">
-                      <div className="space-y-3">
-                        {tokenData.metadata.files.map((file, index) => (
-                          <div
-                            key={index}
-                            className="flex items-center justify-between p-3 bg-card/50 rounded-lg border"
-                          >
-                            <div className="flex items-center space-x-3">
-                              <div className="w-8 h-8 bg-gradient-to-br from-neon-purple to-neon-cyan rounded flex items-center justify-center">
-                                <span className="text-xs font-bold text-background">
-                                  {file.name.split(".").pop()?.toUpperCase() ||
-                                    "FILE"}
-                                </span>
-                              </div>
-                              <span className="font-medium">{file.name}</span>
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() =>
-                                window.open(
-                                  `https://ipfs.io/ipfs/${file.cid}`,
-                                  "_blank"
-                                )
-                              }
-                              className="h-8 w-8 p-0"
+                  {(() => {
+                    const files =
+                      tokenData.metadata.files ||
+                      tokenData.metadata.uploadedFiles ||
+                      [];
+                    console.log("Files check:", files);
+                    return files.length > 0 ? (
+                      <Card className="glass p-6">
+                        <div className="space-y-3">
+                          {files.map((file, index) => (
+                            <div
+                              key={index}
+                              className="flex items-center justify-between p-3 bg-card/50 rounded-lg border"
                             >
-                              <ExternalLink className="h-4 w-4" />
-                            </Button>
+                              <div className="flex items-center space-x-3">
+                                <div className="w-8 h-8 bg-gradient-to-br from-neon-purple to-neon-cyan rounded flex items-center justify-center">
+                                  <span className="text-xs font-bold text-background">
+                                    {file.name
+                                      .split(".")
+                                      .pop()
+                                      ?.toUpperCase() || "FILE"}
+                                  </span>
+                                </div>
+                                <span className="font-medium">{file.name}</span>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() =>
+                                  window.open(
+                                    `https://ipfs.io/ipfs/${file.cid}`,
+                                    "_blank"
+                                  )
+                                }
+                                className="h-8 w-8 p-0"
+                              >
+                                <ExternalLink className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      </Card>
+                    ) : (
+                      <Card className="glass p-6 text-center">
+                        <p className="text-muted-foreground">
+                          No files uploaded for this persona
+                        </p>
+                        <details className="mt-4 text-left">
+                          <summary className="cursor-pointer text-sm text-neon-cyan">
+                            Debug: Show metadata structure
+                          </summary>
+                          <pre className="mt-2 text-xs bg-card/50 p-2 rounded overflow-auto">
+                            {JSON.stringify(tokenData.metadata, null, 2)}
+                          </pre>
+                          <div className="mt-2 text-xs">
+                            <p>
+                              <strong>Files found:</strong> {files.length}
+                            </p>
+                            <p>
+                              <strong>Has files property:</strong>{" "}
+                              {!!tokenData.metadata.files}
+                            </p>
+                            <p>
+                              <strong>Has uploadedFiles property:</strong>{" "}
+                              {!!tokenData.metadata.uploadedFiles}
+                            </p>
                           </div>
-                        ))}
-                      </div>
-                    </Card>
-                  ) : (
-                    <Card className="glass p-6 text-center">
-                      <p className="text-muted-foreground">
-                        No files uploaded for this persona
-                      </p>
-                    </Card>
-                  )}
+                        </details>
+                      </Card>
+                    );
+                  })()}
                 </TabsContent>
 
                 <TabsContent value="linked" className="space-y-4">
@@ -465,40 +571,25 @@ export default function PersonaPage() {
               </Tabs>
             </div>
 
-            {/* Right Column - Chat */}
-            <div className="space-y-6">
+            {/* Chat Interface - Full Width */}
+            <div className="flex flex-col h-[calc(100vh-300px)] min-h-[600px] relative">
               <ChatPanel
                 tokenId={tokenId}
                 personaName={tokenData.metadata.name}
               />
 
-              {/* Link Assets Card */}
-              <Card className="glass p-6">
-                <div className="text-center space-y-4">
-                  <div className="w-16 h-16 mx-auto bg-gradient-to-br from-neon-magenta to-neon-purple rounded-full flex items-center justify-center">
-                    <Link className="h-8 w-8 text-background" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-neon-magenta mb-2">
-                      Link Cross-Chain Assets
-                    </h3>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Connect your NFTs from other chains to this persona
-                    </p>
-                  </div>
-                  <Button
-                    asChild
-                    variant="outline"
-                    className="w-full glass bg-transparent"
-                    size="lg"
-                  >
-                    <a href="/link">
-                      <Link className="mr-2 h-5 w-5" />
-                      Link Assets
-                    </a>
-                  </Button>
-                </div>
-              </Card>
+              {/* Floating Action Button for Linking Assets */}
+              <div className="fixed bottom-6 right-6 z-50">
+                <Button
+                  asChild
+                  size="lg"
+                  className="rounded-full w-14 h-14 bg-gradient-to-r from-neon-magenta to-neon-purple hover:opacity-90 shadow-lg"
+                >
+                  <a href={`/link?tokenId=${tokenId}`}>
+                    <Plus className="h-6 w-6" />
+                  </a>
+                </Button>
+              </div>
             </div>
           </div>
         </motion.div>
