@@ -15,11 +15,11 @@ export function ChatPanel({ tokenId, personaName }: ChatPanelProps) {
     {
       id: "welcome-message",
       role: "assistant",
-      content: `Hello! I'm ${personaName}. Ask me anything about the documents I've been trained on.`,
+      content: `Hello! I'm ${personaName}. You can ask anything about me.`,
       parts: [
         {
           type: "text",
-          text: `Hello! I'm ${personaName}. Ask me anything about the documents I've been trained on.`,
+          text: `Hello! I'm ${personaName}. You can ask anything about me.`,
         },
       ],
     },
