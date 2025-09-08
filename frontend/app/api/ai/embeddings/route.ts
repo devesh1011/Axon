@@ -29,12 +29,24 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { data: existingRecords } = await supabase
+    const { data: existingRecords, error: fetchError } = await supabase
       .from("persona_embeddings")
       .select("fingerprint")
       .eq("token_id", tokenId);
+
+    if (fetchError) {
+      console.error("Error fetching existing records:", fetchError);
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Database fetch failed: ${fetchError.message}`,
+        },
+        { status: 500 }
+      );
+    }
+
     const existingFingerprints = new Set(
-      existingRecords?.map((r) => r.fingerprint) || []
+      existingRecords?.map((r: any) => r.fingerprint) || []
     );
 
     const newFilesToProcess: SelectedFile[] = [];
@@ -84,7 +96,29 @@ export async function POST(req: NextRequest) {
       embedding_dim: meta.embedding_dim,
       metadata: meta.metadata,
     }));
-    await supabase.from("persona_embeddings").insert(recordsToInsert);
+
+    console.log("[Embeddings API] Inserting records:", recordsToInsert.length);
+
+    const { error: insertError } = await supabase
+      .from("persona_embeddings")
+      .insert(recordsToInsert);
+
+    if (insertError) {
+      console.error("[Embeddings API] Database insertion failed:", insertError);
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Database insertion failed: ${insertError.message}`,
+        },
+        { status: 500 }
+      );
+    }
+
+    console.log(
+      "[Embeddings API] Successfully processed",
+      newFilesToProcess.length,
+      "files"
+    );
 
     return NextResponse.json({
       ...result,

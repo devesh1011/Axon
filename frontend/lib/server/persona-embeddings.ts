@@ -1,10 +1,9 @@
 // frontend/lib/server/persona-embeddings.ts
-import { supabase } from "@/lib/supabase";
-import crypto from "crypto";
 import { GoogleGenerativeAIEmbeddings } from "@langchain/google-genai";
 import { SupabaseVectorStore } from "@langchain/community/vectorstores/supabase";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { PDFLoader } from "@langchain/community/document_loaders/fs/pdf";
+import { supabase } from "@/lib/supabase";
 
 interface SelectedFile {
   file: File;
@@ -84,17 +83,12 @@ export async function docEmbeddings(
 
       const chunks = await textSplitter.splitText(t.text);
       for (const chunk of chunks) {
-        const chunkHash = crypto
-          .createHash("sha256")
-          .update(chunk)
-          .digest("hex");
         documents.push({
           pageContent: chunk,
           metadata: {
             source: t.name,
             token_id: tokenId,
             persona_key: personaKey,
-            chunk_hash: chunkHash,
           },
         });
       }
@@ -122,27 +116,55 @@ export async function docEmbeddings(
     return { success: false, error: `vectorstore init failed: ${String(e)}` };
   }
 
-  const BATCH_SIZE = 50;
-  let inserted = 0;
+  console.log(`[docEmbeddings] Inserting ${documents.length} documents`);
+
   try {
-    for (let i = 0; i < documents.length; i += BATCH_SIZE) {
-      const batch = documents.slice(i, i + BATCH_SIZE);
-      const rows = batch.map((doc) => ({
-        content: doc.pageContent,
-        metadata: doc.metadata,
-        token_id: doc.metadata.token_id,
-        persona_key: doc.metadata.persona_key,
-        chunk_hash: doc.metadata.chunk_hash,
-      }));
-      const { error } = await supabase.from("persona_vectors").insert(rows);
-      if (error) throw error;
-      inserted += batch.length;
+    // Use addDocuments method which handles embeddings properly
+    const result = await store.addDocuments(documents);
+
+    // Now update the records to include token_id and persona_key in separate columns
+    // Get the IDs of the records we just inserted
+    const { data: insertedRecords, error: fetchError } = await supabase
+      .from("persona_vectors")
+      .select("id")
+      .is("token_id", null)
+      .order("created_at", { ascending: false })
+      .limit(documents.length);
+
+    if (fetchError) {
+      console.warn(
+        "[docEmbeddings] Could not fetch inserted record IDs:",
+        fetchError
+      );
+    } else if (insertedRecords && insertedRecords.length > 0) {
+      // Update the records with token_id and persona_key
+      const { error: updateError } = await supabase
+        .from("persona_vectors")
+        .update({
+          token_id: tokenId,
+          persona_key: personaKey,
+        })
+        .in(
+          "id",
+          insertedRecords.map((r) => r.id)
+        );
+
+      if (updateError) {
+        console.warn(
+          "[docEmbeddings] Could not update token_id and persona_key:",
+          updateError
+        );
+      } else {
+        console.log(
+          `[docEmbeddings] Updated ${insertedRecords.length} records with token_id and persona_key`
+        );
+      }
     }
 
     console.log(
-      `[Embeddings] Inserted ${inserted} document chunks into persona_vectors.`
+      `[Embeddings] Successfully inserted ${documents.length} document chunks into persona_vectors.`
     );
-    return { success: true, insertedCount: inserted };
+    return { success: true, insertedCount: documents.length };
   } catch (e) {
     console.error("Error adding documents to vector store:", e);
     return { success: false, error: `Database insertion failed: ${String(e)}` };
